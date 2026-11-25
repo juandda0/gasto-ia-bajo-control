@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cómo funciona · Gasto en IA bajo control</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap">
+  <link rel="stylesheet" href="estilos.css">
+</head>
+<body>
+  <canvas id="particulas" aria-hidden="true"></canvas>
+
+  <header class="top">
+    <div class="marca" data-ir="inicio"><span class="logo"></span>Gasto en IA bajo control</div>
+    <nav>
+      <a data-ir="inicio">Inicio</a>
+      <a data-ir="datos">Datos</a>
+      <a data-ir="modelo0">Ciclo</a>
+      <a data-ir="resultado">Resultado</a>
+    </nav>
+    <div class="derecha">
+      <a class="btn" href="/" id="volver">← Vista empresa</a>
+      <button class="btn" id="btnExcel" type="button">Descargar Excel</button>
+      <button class="btn primario" id="btnOptimizar" type="button">Optimizar</button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <aside class="lado" id="lado" aria-label="Pasos"></aside>
+    <main id="main"></main>
+  </div>
+  <div class="aviso" id="aviso" role="status"></div>
+  <script src="app.js"></script>
+</body>
+</html>

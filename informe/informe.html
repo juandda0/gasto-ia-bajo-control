@@ -1,0 +1,2778 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><title>Gasto en IA bajo control — Informe</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap">
+<style>
+@page { size: Letter; margin: 22mm 20mm 20mm 20mm;
+  @bottom-right { content: counter(page); font: 9pt 'Geist', sans-serif; color: #666; }
+  @bottom-left { content: "Gasto en IA bajo control · Programación Lineal"; font: 8pt 'Geist', sans-serif; color: #888; } }
+@page :first { margin: 0; @bottom-right { content: none; } @bottom-left { content: none; } }
+* { box-sizing: border-box; }
+html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+body { font-family: 'Geist', 'DejaVu Sans', sans-serif; font-size: 10pt; line-height: 1.5; color: #111; margin: 0; }
+p { margin: 0 0 8pt; text-align: justify; hyphens: auto; }
+ul, ol { margin: 0 0 8pt; padding-left: 16pt; }
+li { margin-bottom: 3pt; }
+b { font-weight: 600; }
+code { font-family: 'Geist Mono', monospace; font-size: 8.6pt; background: #f2f2f2; padding: 0 3px; border-radius: 3px; }
+h1 { font-size: 17pt; font-weight: 700; letter-spacing: -0.02em; margin: 0 0 10pt; padding-bottom: 6pt; border-bottom: 1.5pt solid #111; break-before: page; break-after: avoid; }
+h2 { font-size: 12.5pt; font-weight: 600; margin: 16pt 0 6pt; break-after: avoid; }
+h3 { font-size: 10.5pt; font-weight: 600; margin: 12pt 0 5pt; break-after: avoid; }
+.sin-num { margin-top: 0; }
+.tenue { color: #666; }
+.nota { font-size: 8.8pt; color: #555; }
+table { border-collapse: collapse; width: 100%; margin: 4pt 0 10pt; font-size: 8.8pt; break-inside: avoid; }
+th, td { padding: 3.5pt 6pt; border-bottom: 0.5pt solid #d4d4d4; text-align: left; vertical-align: middle; }
+thead th { font-weight: 600; border-bottom: 1pt solid #111; font-size: 8.2pt; color: #333; }
+.num { text-align: right; font-variant-numeric: tabular-nums; }
+.ec { text-align: center; font-size: 10.5pt; margin: 6pt 0 10pt; }
+.modelo { border: 0.75pt solid #111; border-radius: 4pt; padding: 8pt 12pt 2pt; margin: 6pt 0 10pt; break-inside: avoid; }
+.modelo p { text-align: left; margin-bottom: 5pt; }
+.sang { padding-left: 18pt; }
+figure { margin: 6pt 0 12pt; text-align: center; break-inside: avoid; }
+figure svg { max-width: 100%; height: auto; }
+figcaption { font-size: 8.5pt; color: #555; margin-top: 3pt; }
+svg.ciclo { width: 100%; font-family: 'Geist', sans-serif; }
+/* matrices */
+.mat { width: auto; margin: 4pt 0 0; font-size: 8.2pt; }
+.mat th, .mat td { padding: 2.5pt 6pt; border: 0.5pt solid #cfcfcf; }
+.mat thead th { border-bottom: 1pt solid #111; }
+.mat td.cub { background: #e9e9e9; }
+.mat td.cub2 { background: #c6c6c6; }
+.mat td.cero { font-weight: 700; }
+.mat td.asig { outline: 1.6pt solid #111; outline-offset: -2pt; }
+.simplex td.fpiv, .simplex td.cpiv { background: #ededed; }
+.simplex td.piv { outline: 1.6pt solid #111; outline-offset: -2pt; font-weight: 700; background: #dcdcdc; }
+.simplex td.neg { font-weight: 700; text-decoration: underline; }
+.simplex tr.zfila th, .simplex tr.zfila td { border-top: 1pt solid #111; font-weight: 600; }
+.simplex tr.razon th, .simplex tr.razon td { border: none; font-size: 7.6pt; }
+.pasos { display: block; }
+.paso { break-inside: avoid; margin: 0 0 10pt; }
+.paso-t { font-size: 9pt; margin-bottom: 3pt; text-align: left; }
+.pn { display: inline-block; min-width: 15pt; height: 15pt; line-height: 15pt; text-align: center; border-radius: 8pt; background: #111; color: #fff; font-size: 7.5pt; font-weight: 600; margin-right: 6pt; }
+.pasos-t { font-size: 8.8pt; }
+/* transporte */
+.trans { width: 100%; }
+.trans td.tcel { position: relative; height: 30pt; min-width: 70pt; text-align: center; vertical-align: bottom; padding-top: 12pt; }
+.trans .costo { position: absolute; top: 2pt; right: 4pt; font-size: 7pt; color: #555; border-left: 0.5pt solid #bbb; border-bottom: 0.5pt solid #bbb; padding: 0 3pt; }
+.trans .signo { position: absolute; top: 2pt; left: 5pt; font-weight: 700; font-size: 10pt; }
+.trans td.basica { background: #efefef; }
+.trans td.entra { outline: 1.6pt solid #111; outline-offset: -2pt; }
+.trans .red { color: #555; }
+.trans .redneg { font-weight: 700; text-decoration: underline; }
+.trans tr.dem th, .trans tr.dem td { color: #444; }
+/* cifras */
+.cifras { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8pt; margin: 6pt 0 12pt; break-inside: avoid; }
+.cifras div { border: 0.75pt solid #111; border-radius: 4pt; padding: 7pt 9pt; }
+.cifras span { display: block; font-size: 8pt; color: #555; }
+.cifras b { display: block; font-size: 14pt; font-weight: 700; letter-spacing: -0.02em; margin: 2pt 0; }
+.cifras small { font-size: 8pt; color: #666; }
+.refs li { font-size: 8.8pt; }
+/* portada */
+.portada { height: 279mm; padding: 26mm 22mm; display: flex; flex-direction: column; justify-content: space-between; break-after: page; background: #0b0b0c; color: #f4f4f5; position: relative; overflow: hidden; }
+.portada::before { content: ""; position: absolute; inset: auto -30mm -60mm auto; width: 170mm; height: 170mm; border-radius: 50%;
+  background: conic-gradient(from 200deg, #4dc3ff, #a774ff, #ff7ab8, #ffb84d, #4dc3ff); filter: blur(60px); opacity: 0.45; }
+.portada > * { position: relative; }
+.p-sup { font-size: 9.5pt; letter-spacing: 0.04em; color: #c9c9cf; text-transform: uppercase; }
+.p-etq { font-family: 'Geist Mono', monospace; font-size: 9pt; color: #a1a1a7; margin-bottom: 10pt; }
+.p-titulo { font-size: 40pt; line-height: 1.05; border: none; margin: 0 0 14pt; padding: 0; letter-spacing: -0.035em; break-before: avoid; color: #fff; }
+.p-sub { font-size: 13pt; color: #d4d4d8; max-width: 130mm; text-align: left; }
+.p-pie { display: grid; grid-template-columns: 1.3fr 1fr 1fr; gap: 10pt; font-size: 10pt; border-top: 0.75pt solid #3a3a3f; padding-top: 10pt; }
+.p-pie span { display: block; font-size: 8pt; color: #8b8b92; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 3pt; }
+.indice { break-after: page; }
+.indice h2 { font-size: 14pt; margin-bottom: 8pt; }
+.toc { list-style: none; padding: 0; margin-top: 4pt; }
+.toc li { padding: 5pt 0; border-bottom: 0.5pt solid #ddd; font-size: 10.5pt; }
+.toc a { color: #111; text-decoration: none; display: flex; justify-content: space-between; }
+.toc .pag { color: #555; font-variant-numeric: tabular-nums; }
+</style></head>
+<body>
+<section class="portada">
+  <div class="p-sup">Universidad de Córdoba · Programación Lineal</div>
+  <div class="p-centro">
+    <div class="p-etq">Proyecto final</div>
+    <h1 class="p-titulo">Gasto en IA bajo control</h1>
+    <p class="p-sub">Programación lineal para decidir cuánto gasta una empresa en herramientas de IA para sus programadores</p>
+  </div>
+  <div class="p-pie">
+    <div><span>Presentado por</span>[Nombre del estudiante]</div>
+    <div><span>Docente</span>[Nombre del docente]</div>
+    <div><span>Fecha</span>Noviembre de 2026</div>
+  </div>
+</section>
+<section class="indice">
+  <h2 class="sin-num">Resumen</h2>
+  <p>Se formula un ciclo mensual de modelos lineales que le dice a una empresa qué plan de IA darle a cada programador (asignación, método húngaro), cuánto debe usar cada uno (Simplex, método gráfico), con qué fuente pagarlo (transporte con Vogel y MODI), cuánto vale un dólar más de presupuesto (sensibilidad) y cómo ajustarse a un recorte (Dual Simplex). En el caso de estudio la factura baja de 1.325 USD a 780 USD y el valor del tiempo ahorrado sube de 2.248,5 USD a 2.528,5 USD.</p>
+  <h2 class="sin-num">Contenido</h2>
+  <ol class="toc"><li><a href="#s1"><span>1. Introducción</span><span class="pag">3</span></a></li><li><a href="#s2"><span>2. Caso de estudio</span><span class="pag">4</span></a></li><li><a href="#s3"><span>3. El ciclo de solución</span><span class="pag">6</span></a></li><li><a href="#s4"><span>4. Modelo 0: qué plan recibe cada persona</span><span class="pag">7</span></a></li><li><a href="#s5"><span>5. Modelo 1: cuánto debe usar cada persona</span><span class="pag">11</span></a></li><li><a href="#s6"><span>6. Vista por equipos: método gráfico y Simplex en tabla</span><span class="pag">13</span></a></li><li><a href="#s7"><span>7. Modelo 2: con qué fuente se paga</span><span class="pag">16</span></a></li><li><a href="#s8"><span>8. Análisis de sensibilidad</span><span class="pag">20</span></a></li><li><a href="#s9"><span>9. Ajuste a mitad de mes: Dual Simplex</span><span class="pag">22</span></a></li><li><a href="#s10"><span>10. Validación</span><span class="pag">24</span></a></li><li><a href="#s11"><span>11. Resultados</span><span class="pag">25</span></a></li><li><a href="#s12"><span>12. El programa</span><span class="pag">26</span></a></li><li><a href="#s13"><span>13. Conclusiones</span><span class="pag">27</span></a></li></ol>
+</section>
+<main>
+<h1 id="s1">1. Introducción</h1>
+<p>Las herramientas de inteligencia artificial para programar (Claude, Cursor, Codex de OpenAI, Antigravity de Google)
+se cobran de dos formas: un <b>asiento</b> mensual que trae incluida una cantidad de uso, y el <b>pago por uso</b>, en el
+que cada consulta se cobra según los tokens que consume. El pago por uso no tiene techo: si un programador deja a un agente
+trabajando toda la tarde, la factura sube sin que nadie lo note hasta fin de mes. Ya hay empresas cuyo gasto en IA se
+acerca o supera lo que pagan en salarios a las mismas personas que usan esas herramientas.</p>
+<p>El problema es que nadie sabe de antemano cuántos tokens va a gastar una tarea, así que no sirve un modelo que pida
+esa información. Lo que sí sabe cualquier empresa, incluso una pequeña o poco organizada, es cuánto gana cada programador,
+qué herramienta usa y cuánto pagó el mes pasado. Este proyecto parte solo de esos datos.</p>
+<p>La propuesta es un <b>ciclo mensual</b> en el que cada método del curso resuelve una pregunta y le pasa su resultado al
+siguiente: qué plan le conviene a cada persona (asignación, método húngaro), cuánto debería usar cada una (planteamiento,
+método gráfico y Simplex), con qué fuente se paga ese uso (transporte: esquina noroeste, costo mínimo, Vogel y MODI), cuánto
+vale un dólar más de presupuesto (análisis de sensibilidad) y cómo se corrige el plan si la gerencia recorta el
+presupuesto a mitad de mes (Dual Simplex). El resultado se entrega en un programa con interfaz web, en un libro de Excel
+listo para Solver y en este informe.</p>
+
+<h2>1.1 Objetivos</h2>
+<p><b>General.</b> Formular y resolver con programación lineal un modelo que le diga a una empresa cuánto gastar en
+herramientas de IA para sus programadores, con qué planes y con qué fuentes de pago, sin pedirle datos que no tiene.</p>
+<ul>
+<li>Plantear cada decisión del problema como un modelo lineal con variables, función objetivo y restricciones explícitas.</li>
+<li>Resolver cada modelo con el método del curso que le corresponde y mostrar el desarrollo paso a paso.</li>
+<li>Encadenar los modelos para que la salida de uno sea la entrada del siguiente, y comprobar que el resultado
+coincide con un solo modelo lineal que lo junte todo.</li>
+<li>Entregar la solución en un programa que una empresa pueda usar y en un Excel que se pueda resolver con Solver.</li>
+</ul>
+
+<h1 id="s2">2. Caso de estudio</h1>
+<p>Se usa una empresa de ejemplo con seis programadores repartidos en dos equipos. Los salarios, las bolsas de los
+asientos y los rendimientos son <b>supuestos</b> del caso; el programa permite cambiarlos. Todo el gasto se mide en
+dólares de uso a precio de lista.</p>
+<h3>Personas (USD al mes)</h3>
+<table class=""><thead><tr><th class="">Persona</th><th class="">Equipo</th><th class="num">Salario</th><th class="num">Gasto en IA del mes pasado</th><th class="num">Herramienta actual</th><th class="num">Tope (15 % del salario)</th></tr></thead><tbody><tr><td class="">Ana</td><td class="">Backend</td><td class="num">2.400</td><td class="num">420</td><td class="num">Claude</td><td class="num">360</td></tr><tr><td class="">Luis</td><td class="">Backend</td><td class="num">2.000</td><td class="num">180</td><td class="num">Cursor</td><td class="num">300</td></tr><tr><td class="">Sara</td><td class="">Backend</td><td class="num">1.700</td><td class="num">95</td><td class="num">Cursor</td><td class="num">255</td></tr><tr><td class="">Pedro</td><td class="">Backend</td><td class="num">1.900</td><td class="num">260</td><td class="num">Claude</td><td class="num">285</td></tr><tr><td class="">Carla</td><td class="">Frontend</td><td class="num">2.200</td><td class="num">310</td><td class="num">OpenAI</td><td class="num">330</td></tr><tr><td class="">Diego</td><td class="">Frontend</td><td class="num">1.800</td><td class="num">60</td><td class="num">Ninguna</td><td class="num">270</td></tr><tr><td class=""><b>Total</b></td><td class=""></td><td class="num "><b>12.000</b></td><td class="num "><b>1.325</b></td><td class="num"></td><td class="num"></td></tr></tbody></table>
+<p class="nota">El mes pasado todo se pagó por API a precio de lista: la factura fue 1.325 USD.</p>
+<h3>Reglas de la empresa</h3>
+<ul>
+<li><b>Presupuesto de gasto extra:</b> lo que se paga aparte de las cuotas de los asientos no pasa del
+6 % de la nómina: B = 0,06 × 12.000 = <b>720 USD</b>.</li>
+<li><b>Tope por persona:</b> nadie usa más del 15 % de su salario.</li>
+<li><b>Mínimo por persona:</b> nadie se queda con menos de 50 USD de uso.</li>
+<li><b>Recorte a mitad de mes:</b> la gerencia puede recortar el presupuesto extra un 25 %.</li>
+</ul>
+<h3>Planes disponibles</h3>
+<table class=""><thead><tr><th class="">Plan</th><th class="">Herramienta</th><th class="num">Cuota mensual (USD)</th><th class="num">Uso incluido o bolsa (USD)</th><th class="num">Cupos</th></tr></thead><tbody><tr><td class="">Cursor Teams</td><td class="">Cursor</td><td class="num">30</td><td class="num">150</td><td class="num">2</td></tr><tr><td class="">Claude Premium</td><td class="">Claude</td><td class="num">100</td><td class="num">400</td><td class="num">1</td></tr><tr><td class="">Claude Standard</td><td class="">Claude</td><td class="num">25</td><td class="num">80</td><td class="num">1</td></tr><tr><td class="">Solo API</td><td class="">Cualquiera</td><td class="num">0</td><td class="num">0</td><td class="num">2</td></tr></tbody></table>
+<p class="nota">Si una persona recibe un plan de una herramienta distinta a la que usa, solo aprovecha el
+60 % de la bolsa (tiene que cambiar su forma de trabajar).</p>
+<h3>Fuentes de pago</h3>
+<ul>
+<li><b>API pago por uso:</b> 1 USD por dólar de uso, sin límite práctico (3.000 USD).</li>
+<li><b>API en batch:</b> 0,5 USD por dólar de uso (mitad de precio), solo para trabajo que puede esperar;
+lo usa el equipo Backend y hasta 250 USD al mes. Los proveedores ofrecen este descuento por procesar en lote.</li>
+<li><b>Bolsas de los asientos:</b> costo 0, porque la cuota ya se pagó.</li>
+</ul>
+<h3>Rendimiento decreciente</h3>
+<p>Cada dólar de uso ahorra tiempo de trabajo, pero cada vez menos: los primeros 100 USD ahorran 0,2 horas por
+dólar, los 150 siguientes 0,1 y el resto 0,04. Una hora vale el salario dividido entre
+160 horas al mes, así que el valor de un dólar en el tramo <i>k</i> para la persona <i>d</i> es</p>
+<div class="ec">r<sub>d,k</sub> = h<sub>k</sub> × salario<sub>d</sub> / 160</div>
+<figure><svg xmlns:xlink="http://www.w3.org/1999/xlink" width="409.349141pt" height="185.419648pt" viewBox="0 0 409.349141 185.419648" xmlns="http://www.w3.org/2000/svg" version="1.1">
+ <metadata>
+  <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+   <cc:Work>
+    <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+    <dc:date>2026-11-25T14:39:41.088727</dc:date>
+    <dc:format>image/svg+xml</dc:format>
+    <dc:creator>
+     <cc:Agent>
+      <dc:title>Matplotlib v3.11.2, https://matplotlib.org/</dc:title>
+     </cc:Agent>
+    </dc:creator>
+   </cc:Work>
+  </rdf:RDF>
+ </metadata>
+ <defs>
+  <style type="text/css">*{stroke-linejoin: round; stroke-linecap: butt}</style>
+ </defs>
+ <g id="figure_1">
+  <g id="patch_1">
+   <path d="M 0 185.419648 
+L 409.349141 185.419648 
+L 409.349141 0 
+L 0 0 
+z
+" style="fill: #ffffff"/>
+  </g>
+  <g id="axes_1">
+   <g id="patch_2">
+    <path d="M 47.599766 149.218945 
+L 393.559766 149.218945 
+L 393.559766 10.618945 
+L 47.599766 10.618945 
+z
+" style="fill: #ffffff"/>
+   </g>
+   <g id="matplotlib.axis_1">
+    <g id="xtick_1">
+     <g id="line2d_1">
+      <defs>
+       <path id="m7cb71add36" d="M 0 0 
+L 0 3.5 
+" style="stroke: #333333; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#m7cb71add36" x="47.599766" y="149.218945" style="fill: #333333; stroke: #333333; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_1">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #333333" x="47.599766" y="163.056836" transform="rotate(-0 47.599766 163.056836)">0</text>
+     </g>
+    </g>
+    <g id="xtick_2">
+     <g id="line2d_2">
+      <g>
+       <use xlink:href="#m7cb71add36" x="116.791766" y="149.218945" style="fill: #333333; stroke: #333333; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_2">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #333333" x="116.791766" y="163.056836" transform="rotate(-0 116.791766 163.056836)">100</text>
+     </g>
+    </g>
+    <g id="xtick_3">
+     <g id="line2d_3">
+      <g>
+       <use xlink:href="#m7cb71add36" x="185.983766" y="149.218945" style="fill: #333333; stroke: #333333; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_3">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #333333" x="185.983766" y="163.056836" transform="rotate(-0 185.983766 163.056836)">200</text>
+     </g>
+    </g>
+    <g id="xtick_4">
+     <g id="line2d_4">
+      <g>
+       <use xlink:href="#m7cb71add36" x="255.175766" y="149.218945" style="fill: #333333; stroke: #333333; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_4">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #333333" x="255.175766" y="163.056836" transform="rotate(-0 255.175766 163.056836)">300</text>
+     </g>
+    </g>
+    <g id="xtick_5">
+     <g id="line2d_5">
+      <g>
+       <use xlink:href="#m7cb71add36" x="324.367766" y="149.218945" style="fill: #333333; stroke: #333333; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_5">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #333333" x="324.367766" y="163.056836" transform="rotate(-0 324.367766 163.056836)">400</text>
+     </g>
+    </g>
+    <g id="xtick_6">
+     <g id="line2d_6">
+      <g>
+       <use xlink:href="#m7cb71add36" x="393.559766" y="149.218945" style="fill: #333333; stroke: #333333; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_6">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #333333" x="393.559766" y="163.056836" transform="rotate(-0 393.559766 163.056836)">500</text>
+     </g>
+    </g>
+    <g id="text_7">
+     <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #222222" x="220.579766" y="176.057539" transform="rotate(-0 220.579766 176.057539)">Uso del mes (USD a precio de lista)</text>
+    </g>
+   </g>
+   <g id="matplotlib.axis_2">
+    <g id="ytick_1">
+     <g id="line2d_7">
+      <path d="M 47.599766 149.218945 
+L 393.559766 149.218945 
+" clip-path="url(#p5819e42e31)" style="fill: none; stroke: #e6e6e6; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_8">
+      <defs>
+       <path id="mc01db5acde" d="M 0 0 
+L -3.5 0 
+" style="stroke: #333333; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#mc01db5acde" x="47.599766" y="149.218945" style="fill: #333333; stroke: #333333; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_8">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: end; fill: #333333" x="40.599766" y="152.637891" transform="rotate(-0 40.599766 152.637891)">0.00</text>
+     </g>
+    </g>
+    <g id="ytick_2">
+     <g id="line2d_9">
+      <path d="M 47.599766 121.498945 
+L 393.559766 121.498945 
+" clip-path="url(#p5819e42e31)" style="fill: none; stroke: #e6e6e6; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_10">
+      <g>
+       <use xlink:href="#mc01db5acde" x="47.599766" y="121.498945" style="fill: #333333; stroke: #333333; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_9">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: end; fill: #333333" x="40.599766" y="124.917891" transform="rotate(-0 40.599766 124.917891)">0.05</text>
+     </g>
+    </g>
+    <g id="ytick_3">
+     <g id="line2d_11">
+      <path d="M 47.599766 93.778945 
+L 393.559766 93.778945 
+" clip-path="url(#p5819e42e31)" style="fill: none; stroke: #e6e6e6; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_12">
+      <g>
+       <use xlink:href="#mc01db5acde" x="47.599766" y="93.778945" style="fill: #333333; stroke: #333333; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_10">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: end; fill: #333333" x="40.599766" y="97.197891" transform="rotate(-0 40.599766 97.197891)">0.10</text>
+     </g>
+    </g>
+    <g id="ytick_4">
+     <g id="line2d_13">
+      <path d="M 47.599766 66.058945 
+L 393.559766 66.058945 
+" clip-path="url(#p5819e42e31)" style="fill: none; stroke: #e6e6e6; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_14">
+      <g>
+       <use xlink:href="#mc01db5acde" x="47.599766" y="66.058945" style="fill: #333333; stroke: #333333; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_11">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: end; fill: #333333" x="40.599766" y="69.477891" transform="rotate(-0 40.599766 69.477891)">0.15</text>
+     </g>
+    </g>
+    <g id="ytick_5">
+     <g id="line2d_15">
+      <path d="M 47.599766 38.338945 
+L 393.559766 38.338945 
+" clip-path="url(#p5819e42e31)" style="fill: none; stroke: #e6e6e6; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_16">
+      <g>
+       <use xlink:href="#mc01db5acde" x="47.599766" y="38.338945" style="fill: #333333; stroke: #333333; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_12">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: end; fill: #333333" x="40.599766" y="41.757891" transform="rotate(-0 40.599766 41.757891)">0.20</text>
+     </g>
+    </g>
+    <g id="ytick_6">
+     <g id="line2d_17">
+      <path d="M 47.599766 10.618945 
+L 393.559766 10.618945 
+" clip-path="url(#p5819e42e31)" style="fill: none; stroke: #e6e6e6; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_18">
+      <g>
+       <use xlink:href="#mc01db5acde" x="47.599766" y="10.618945" style="fill: #333333; stroke: #333333; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_13">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: end; fill: #333333" x="40.599766" y="14.037891" transform="rotate(-0 40.599766 14.037891)">0.25</text>
+     </g>
+    </g>
+    <g id="text_14">
+     <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #222222" x="14.398594" y="79.918945" transform="rotate(-90 14.398594 79.918945)">Horas ahorradas por dólar</text>
+    </g>
+   </g>
+   <g id="patch_3">
+    <path d="M 47.599766 149.218945 
+L 116.791766 149.218945 
+L 116.791766 38.338945 
+L 47.599766 38.338945 
+z
+" clip-path="url(#p5819e42e31)" style="fill: #2f7fd8; opacity: 0.85; stroke: #ffffff; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_4">
+    <path d="M 116.791766 149.218945 
+L 220.579766 149.218945 
+L 220.579766 93.778945 
+L 116.791766 93.778945 
+z
+" clip-path="url(#p5819e42e31)" style="fill: #8a4fe0; opacity: 0.85; stroke: #ffffff; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_5">
+    <path d="M 220.579766 149.218945 
+L 393.559766 149.218945 
+L 393.559766 127.042945 
+L 220.579766 127.042945 
+z
+" clip-path="url(#p5819e42e31)" style="fill: #e8862a; opacity: 0.85; stroke: #ffffff; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_6">
+    <path d="M 47.599766 149.218945 
+L 47.599766 10.618945 
+" style="fill: none; stroke: #444444; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="patch_7">
+    <path d="M 47.599766 149.218945 
+L 393.559766 149.218945 
+" style="fill: none; stroke: #444444; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="text_15">
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'; text-anchor: middle" x="82.195766" y="35.012545" transform="rotate(-0 82.195766 35.012545)">0,20 h por dólar</text>
+   </g>
+   <g id="text_16">
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'; text-anchor: middle" x="168.685766" y="90.452545" transform="rotate(-0 168.685766 90.452545)">0,10 h por dólar</text>
+   </g>
+   <g id="text_17">
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'; text-anchor: middle" x="307.069766" y="123.716545" transform="rotate(-0 307.069766 123.716545)">0,04 h por dólar</text>
+   </g>
+  </g>
+ </g>
+ <defs>
+  <clipPath id="p5819e42e31">
+   <rect x="47.599766" y="10.618945" width="345.96" height="138.6"/>
+  </clipPath>
+ </defs>
+</svg>
+<figcaption>Figura 1. Horas ahorradas por cada dólar de uso, por tramo.</figcaption></figure>
+<table class=""><thead><tr><th class="">Persona</th><th class="num">r<sub>d,1</sub> · r<sub>d,2</sub> · r<sub>d,3</sub> (USD de tiempo por dólar)</th></tr></thead><tbody><tr><td class="">Ana</td><td class="num">3 · 1,5 · 0,6</td></tr><tr><td class="">Luis</td><td class="num">2,5 · 1,25 · 0,5</td></tr><tr><td class="">Sara</td><td class="num">2,125 · 1,062 · 0,425</td></tr><tr><td class="">Pedro</td><td class="num">2,375 · 1,188 · 0,475</td></tr><tr><td class="">Carla</td><td class="num">2,75 · 1,375 · 0,55</td></tr><tr><td class="">Diego</td><td class="num">2,25 · 1,125 · 0,45</td></tr></tbody></table>
+<p>Los tramos hacen que el problema siga siendo lineal: como r<sub>d,1</sub> &gt; r<sub>d,2</sub> &gt; r<sub>d,3</sub>,
+al maximizar el modelo siempre llena primero el tramo que más rinde, sin necesitar variables enteras.</p>
+
+<h1 id="s3">3. El ciclo de solución</h1>
+<p>El problema completo se divide en cinco preguntas. Cada una se responde con un método del curso y su resultado
+alimenta al siguiente paso.</p>
+<figure><svg viewBox="0 0 735 240" xmlns="http://www.w3.org/2000/svg" class="ciclo"><defs><marker id="fl" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#111"/></marker></defs><rect x="20" y="20" width="200" height="62" rx="8" fill="#fff" stroke="#111" stroke-width="1.2"/><text x="120.0" y="47" text-anchor="middle" font-size="13" font-weight="600">Datos de la empresa</text><text x="120.0" y="66" text-anchor="middle" font-size="10.5" fill="#555">salario, herramienta, gasto</text><rect x="250" y="20" width="200" height="62" rx="8" fill="#fff" stroke="#111" stroke-width="1.2"/><text x="350.0" y="47" text-anchor="middle" font-size="13" font-weight="600">Modelo 0 · Qué plan</text><text x="350.0" y="66" text-anchor="middle" font-size="10.5" fill="#555">Asignación · método húngaro</text><rect x="480" y="20" width="200" height="62" rx="8" fill="#fff" stroke="#111" stroke-width="1.2"/><text x="580.0" y="47" text-anchor="middle" font-size="13" font-weight="600">Modelo 1 · Cuánto usar</text><text x="580.0" y="66" text-anchor="middle" font-size="10.5" fill="#555">Simplex · gráfico · tabla</text><rect x="480" y="150" width="200" height="62" rx="8" fill="#fff" stroke="#111" stroke-width="1.2"/><text x="580.0" y="177" text-anchor="middle" font-size="13" font-weight="600">Modelo 2 · Con qué pagar</text><text x="580.0" y="196" text-anchor="middle" font-size="10.5" fill="#555">Transporte · Vogel · MODI</text><rect x="250" y="150" width="200" height="62" rx="8" fill="#fff" stroke="#111" stroke-width="1.2"/><text x="350.0" y="177" text-anchor="middle" font-size="13" font-weight="600">Indicadores</text><text x="350.0" y="196" text-anchor="middle" font-size="10.5" fill="#555">Análisis de sensibilidad</text><rect x="20" y="150" width="200" height="62" rx="8" fill="#fff" stroke="#111" stroke-width="1.2"/><text x="120.0" y="177" text-anchor="middle" font-size="13" font-weight="600">Ajuste a mitad de mes</text><text x="120.0" y="196" text-anchor="middle" font-size="10.5" fill="#555">Dual Simplex</text><line x1="220" y1="51" x2="248" y2="51" stroke="#111" stroke-width="1.2" marker-end="url(#fl)"/><line x1="450" y1="51" x2="478" y2="51" stroke="#111" stroke-width="1.2" marker-end="url(#fl)"/><text x="465.0" y="45" text-anchor="middle" font-size="10" fill="#555">bolsa</text><line x1="580" y1="82" x2="582" y2="148" stroke="#111" stroke-width="1.2" marker-end="url(#fl)"/><text x="588" y="120.0" text-anchor="start" font-size="10" fill="#555">demanda</text><line x1="480" y1="181" x2="452" y2="181" stroke="#111" stroke-width="1.2" marker-end="url(#fl)"/><line x1="250" y1="181" x2="222" y2="181" stroke="#111" stroke-width="1.2" marker-end="url(#fl)"/><path d="M 680 181 L 700 181 L 700 51 L 682 51" fill="none" stroke="#111" stroke-width="1" stroke-dasharray="4 3" marker-end="url(#fl)"/><text x="712" y="116" font-size="10" fill="#555" transform="rotate(90 712 116)" text-anchor="middle">costo real de un dólar más</text><text x="350" y="232" text-anchor="middle" font-size="10.5" fill="#555">El ciclo se repite cada mes con el gasto real del mes anterior.</text></svg><figcaption>Figura 2. Ciclo mensual: cada método le pasa su resultado al siguiente.</figcaption></figure>
+<table class=""><thead><tr><th class="">Paso</th><th class="">Pregunta</th><th class="">Método</th><th class="">Entrega al siguiente</th></tr></thead><tbody><tr><td class="">Modelo 0</td><td class="">¿Qué plan recibe cada persona?</td><td class="">Asignación, método húngaro</td><td class="">La bolsa que trae el plan de cada persona</td></tr><tr><td class="">Modelo 1</td><td class="">¿Cuánto debe usar cada una?</td><td class="">Planteamiento y Simplex; en dos variables, método gráfico y Simplex en tabla</td><td class="">El uso óptimo, que es la demanda de cada equipo</td></tr><tr><td class="">Modelo 2</td><td class="">¿Con qué fuente se paga?</td><td class="">Transporte: noroeste, costo mínimo, Vogel y MODI</td><td class="">El costo real de un dólar más, que vuelve al Modelo 1</td></tr><tr><td class="">Indicadores</td><td class="">¿Vamos bien?</td><td class="">Análisis de sensibilidad</td><td class="">Precios sombra, rango del presupuesto y alertas</td></tr><tr><td class="">Ajuste</td><td class="">¿Y si recortan el presupuesto?</td><td class="">Dual Simplex</td><td class="">Nuevos topes sin resolver desde cero</td></tr></tbody></table>
+<p>El ciclo <b>converge</b> cuando el costo de un dólar extra que el Modelo 1 supone es el mismo que el Modelo 2 calcula.
+En el caso de estudio esto ocurre en la primera vuelta (sección 6.4). Al final se comprueba que el ciclo da exactamente el
+mismo resultado que un solo modelo lineal que junta el Modelo 1 y el Modelo 2 (sección 9).</p>
+
+<h1 id="s4">4. Modelo 0: qué plan recibe cada persona</h1>
+<h2>4.1 Planteamiento</h2>
+<p>Cada persona recibe exactamente un plan y cada cupo de plan se le da a una sola persona. Como hay 6 personas y
+6 cupos (2 de Cursor Teams, 1 de Claude Premium, 1 de Claude Standard y 2 de solo API), es un <b>problema de asignación</b>
+balanceado. El costo de darle a la persona <i>i</i> el cupo <i>j</i> se estima con lo que gastó el mes pasado:</p>
+<div class="ec">c<sub>ij</sub> = cuota<sub>j</sub> + máx(0, gasto<sub>i</sub> − a<sub>ij</sub> × bolsa<sub>j</sub>)</div>
+<p>donde a<sub>ij</sub> = 1 si el plan es de la herramienta que la persona ya usa y 0,6 si no
+(el plan "Solo API" sirve con cualquier herramienta). Por ejemplo, Ana gasta 420 y usa Claude: con Claude Premium paga
+100 + máx(0, 420 − 400) = 120; con Cursor Teams paga 30 + máx(0, 420 − 0,6 × 150) = 360.</p>
+<div class="modelo">
+<p><b>Variables:</b> x<sub>ij</sub> = 1 si la persona <i>i</i> recibe el cupo <i>j</i>, 0 si no.</p>
+<p><b>Minimizar</b> Z = Σ<sub>i</sub> Σ<sub>j</sub> c<sub>ij</sub> x<sub>ij</sub></p>
+<p><b>Sujeto a</b> Σ<sub>j</sub> x<sub>ij</sub> = 1 para cada persona <i>i</i> &nbsp;·&nbsp;
+Σ<sub>i</sub> x<sub>ij</sub> = 1 para cada cupo <i>j</i> &nbsp;·&nbsp; x<sub>ij</sub> ≥ 0</p>
+</div>
+<p>La matriz de restricciones de la asignación es totalmente unimodular, así que el óptimo del modelo lineal ya sale con
+valores 0 y 1. Se resuelve con el método húngaro.</p>
+<h2>4.2 Desarrollo con el método húngaro</h2>
+<p>En las tablas, las celdas grises están cubiertas por una línea, las de gris oscuro están en el cruce de dos líneas y
+los ceros van en negrilla. En la última tabla, el recuadro marca la asignación.</p>
+<div class="pasos"><div class="paso"><div class="paso-t"><span class="pn">0</span>Matriz de costos</div><table class="mat"><thead><tr><th></th><th class="num">Cursor Teams 1</th><th class="num">Cursor Teams 2</th><th class="num">Claude Premium</th><th class="num">Claude Standard</th><th class="num">Solo API 1</th><th class="num">Solo API 2</th></tr></thead><tbody><tr><th>Ana</th><td class="num ">360</td><td class="num ">360</td><td class="num ">120</td><td class="num ">365</td><td class="num ">420</td><td class="num ">420</td></tr><tr><th>Luis</th><td class="num ">60</td><td class="num ">60</td><td class="num ">100</td><td class="num ">157</td><td class="num ">180</td><td class="num ">180</td></tr><tr><th>Sara</th><td class="num ">30</td><td class="num ">30</td><td class="num ">100</td><td class="num ">72</td><td class="num ">95</td><td class="num ">95</td></tr><tr><th>Pedro</th><td class="num ">200</td><td class="num ">200</td><td class="num ">100</td><td class="num ">205</td><td class="num ">260</td><td class="num ">260</td></tr><tr><th>Carla</th><td class="num ">250</td><td class="num ">250</td><td class="num ">170</td><td class="num ">287</td><td class="num ">310</td><td class="num ">310</td></tr><tr><th>Diego</th><td class="num ">30</td><td class="num ">30</td><td class="num ">100</td><td class="num ">37</td><td class="num ">60</td><td class="num ">60</td></tr></tbody></table></div><div class="paso"><div class="paso-t"><span class="pn">1</span>Se resta el mínimo de cada fila</div><table class="mat"><thead><tr><th></th><th class="num">Cursor Teams 1</th><th class="num">Cursor Teams 2</th><th class="num">Claude Premium</th><th class="num">Claude Standard</th><th class="num">Solo API 1</th><th class="num">Solo API 2</th></tr></thead><tbody><tr><th>Ana</th><td class="num ">240</td><td class="num ">240</td><td class="num cero">0</td><td class="num ">245</td><td class="num ">300</td><td class="num ">300</td></tr><tr><th>Luis</th><td class="num cero">0</td><td class="num cero">0</td><td class="num ">40</td><td class="num ">97</td><td class="num ">120</td><td class="num ">120</td></tr><tr><th>Sara</th><td class="num cero">0</td><td class="num cero">0</td><td class="num ">70</td><td class="num ">42</td><td class="num ">65</td><td class="num ">65</td></tr><tr><th>Pedro</th><td class="num ">100</td><td class="num ">100</td><td class="num cero">0</td><td class="num ">105</td><td class="num ">160</td><td class="num ">160</td></tr><tr><th>Carla</th><td class="num ">80</td><td class="num ">80</td><td class="num cero">0</td><td class="num ">117</td><td class="num ">140</td><td class="num ">140</td></tr><tr><th>Diego</th><td class="num cero">0</td><td class="num cero">0</td><td class="num ">70</td><td class="num ">7</td><td class="num ">30</td><td class="num ">30</td></tr></tbody></table></div><div class="paso"><div class="paso-t"><span class="pn">2</span>Se resta el mínimo de cada columna</div><table class="mat"><thead><tr><th></th><th class="num">Cursor Teams 1</th><th class="num">Cursor Teams 2</th><th class="num">Claude Premium</th><th class="num">Claude Standard</th><th class="num">Solo API 1</th><th class="num">Solo API 2</th></tr></thead><tbody><tr><th>Ana</th><td class="num ">240</td><td class="num ">240</td><td class="num cero">0</td><td class="num ">238</td><td class="num ">270</td><td class="num ">270</td></tr><tr><th>Luis</th><td class="num cero">0</td><td class="num cero">0</td><td class="num ">40</td><td class="num ">90</td><td class="num ">90</td><td class="num ">90</td></tr><tr><th>Sara</th><td class="num cero">0</td><td class="num cero">0</td><td class="num ">70</td><td class="num ">35</td><td class="num ">35</td><td class="num ">35</td></tr><tr><th>Pedro</th><td class="num ">100</td><td class="num ">100</td><td class="num cero">0</td><td class="num ">98</td><td class="num ">130</td><td class="num ">130</td></tr><tr><th>Carla</th><td class="num ">80</td><td class="num ">80</td><td class="num cero">0</td><td class="num ">110</td><td class="num ">110</td><td class="num ">110</td></tr><tr><th>Diego</th><td class="num cero">0</td><td class="num cero">0</td><td class="num ">70</td><td class="num cero">0</td><td class="num cero">0</td><td class="num cero">0</td></tr></tbody></table></div><div class="paso"><div class="paso-t"><span class="pn">3</span>Se cubren los ceros con 4 líneas. Líneas: filas Luis, Sara, Diego y columnas Claude Premium. Como son menos de 6, todavía no se puede asignar.</div><table class="mat"><thead><tr><th></th><th class="num">Cursor Teams 1</th><th class="num">Cursor Teams 2</th><th class="num">Claude Premium</th><th class="num">Claude Standard</th><th class="num">Solo API 1</th><th class="num">Solo API 2</th></tr></thead><tbody><tr><th>Ana</th><td class="num ">240</td><td class="num ">240</td><td class="num cub cero">0</td><td class="num ">238</td><td class="num ">270</td><td class="num ">270</td></tr><tr><th>Luis</th><td class="num cub cero">0</td><td class="num cub cero">0</td><td class="num cub2">40</td><td class="num cub">90</td><td class="num cub">90</td><td class="num cub">90</td></tr><tr><th>Sara</th><td class="num cub cero">0</td><td class="num cub cero">0</td><td class="num cub2">70</td><td class="num cub">35</td><td class="num cub">35</td><td class="num cub">35</td></tr><tr><th>Pedro</th><td class="num ">100</td><td class="num ">100</td><td class="num cub cero">0</td><td class="num ">98</td><td class="num ">130</td><td class="num ">130</td></tr><tr><th>Carla</th><td class="num ">80</td><td class="num ">80</td><td class="num cub cero">0</td><td class="num ">110</td><td class="num ">110</td><td class="num ">110</td></tr><tr><th>Diego</th><td class="num cub cero">0</td><td class="num cub cero">0</td><td class="num cub2">70</td><td class="num cub cero">0</td><td class="num cub cero">0</td><td class="num cub cero">0</td></tr></tbody></table></div><div class="paso"><div class="paso-t"><span class="pn">4</span>Se resta 80 a lo no cubierto y se suma en los cruces: δ = 80 es el menor valor que quedó sin cubrir.</div><table class="mat"><thead><tr><th></th><th class="num">Cursor Teams 1</th><th class="num">Cursor Teams 2</th><th class="num">Claude Premium</th><th class="num">Claude Standard</th><th class="num">Solo API 1</th><th class="num">Solo API 2</th></tr></thead><tbody><tr><th>Ana</th><td class="num ">160</td><td class="num ">160</td><td class="num cero">0</td><td class="num ">158</td><td class="num ">190</td><td class="num ">190</td></tr><tr><th>Luis</th><td class="num cero">0</td><td class="num cero">0</td><td class="num ">120</td><td class="num ">90</td><td class="num ">90</td><td class="num ">90</td></tr><tr><th>Sara</th><td class="num cero">0</td><td class="num cero">0</td><td class="num ">150</td><td class="num ">35</td><td class="num ">35</td><td class="num ">35</td></tr><tr><th>Pedro</th><td class="num ">20</td><td class="num ">20</td><td class="num cero">0</td><td class="num ">18</td><td class="num ">50</td><td class="num ">50</td></tr><tr><th>Carla</th><td class="num cero">0</td><td class="num cero">0</td><td class="num cero">0</td><td class="num ">30</td><td class="num ">30</td><td class="num ">30</td></tr><tr><th>Diego</th><td class="num cero">0</td><td class="num cero">0</td><td class="num ">150</td><td class="num cero">0</td><td class="num cero">0</td><td class="num cero">0</td></tr></tbody></table></div><div class="paso"><div class="paso-t"><span class="pn">5</span>Se cubren los ceros con 4 líneas. Líneas: filas Diego y columnas Cursor Teams 1, Cursor Teams 2, Claude Premium. Como son menos de 6, todavía no se puede asignar.</div><table class="mat"><thead><tr><th></th><th class="num">Cursor Teams 1</th><th class="num">Cursor Teams 2</th><th class="num">Claude Premium</th><th class="num">Claude Standard</th><th class="num">Solo API 1</th><th class="num">Solo API 2</th></tr></thead><tbody><tr><th>Ana</th><td class="num cub">160</td><td class="num cub">160</td><td class="num cub cero">0</td><td class="num ">158</td><td class="num ">190</td><td class="num ">190</td></tr><tr><th>Luis</th><td class="num cub cero">0</td><td class="num cub cero">0</td><td class="num cub">120</td><td class="num ">90</td><td class="num ">90</td><td class="num ">90</td></tr><tr><th>Sara</th><td class="num cub cero">0</td><td class="num cub cero">0</td><td class="num cub">150</td><td class="num ">35</td><td class="num ">35</td><td class="num ">35</td></tr><tr><th>Pedro</th><td class="num cub">20</td><td class="num cub">20</td><td class="num cub cero">0</td><td class="num ">18</td><td class="num ">50</td><td class="num ">50</td></tr><tr><th>Carla</th><td class="num cub cero">0</td><td class="num cub cero">0</td><td class="num cub cero">0</td><td class="num ">30</td><td class="num ">30</td><td class="num ">30</td></tr><tr><th>Diego</th><td class="num cub2 cero">0</td><td class="num cub2 cero">0</td><td class="num cub2">150</td><td class="num cub cero">0</td><td class="num cub cero">0</td><td class="num cub cero">0</td></tr></tbody></table></div><div class="paso"><div class="paso-t"><span class="pn">6</span>Se resta 18 a lo no cubierto y se suma en los cruces: δ = 18 es el menor valor que quedó sin cubrir.</div><table class="mat"><thead><tr><th></th><th class="num">Cursor Teams 1</th><th class="num">Cursor Teams 2</th><th class="num">Claude Premium</th><th class="num">Claude Standard</th><th class="num">Solo API 1</th><th class="num">Solo API 2</th></tr></thead><tbody><tr><th>Ana</th><td class="num ">160</td><td class="num ">160</td><td class="num cero">0</td><td class="num ">140</td><td class="num ">172</td><td class="num ">172</td></tr><tr><th>Luis</th><td class="num cero">0</td><td class="num cero">0</td><td class="num ">120</td><td class="num ">72</td><td class="num ">72</td><td class="num ">72</td></tr><tr><th>Sara</th><td class="num cero">0</td><td class="num cero">0</td><td class="num ">150</td><td class="num ">17</td><td class="num ">17</td><td class="num ">17</td></tr><tr><th>Pedro</th><td class="num ">20</td><td class="num ">20</td><td class="num cero">0</td><td class="num cero">0</td><td class="num ">32</td><td class="num ">32</td></tr><tr><th>Carla</th><td class="num cero">0</td><td class="num cero">0</td><td class="num cero">0</td><td class="num ">12</td><td class="num ">12</td><td class="num ">12</td></tr><tr><th>Diego</th><td class="num ">18</td><td class="num ">18</td><td class="num ">168</td><td class="num cero">0</td><td class="num cero">0</td><td class="num cero">0</td></tr></tbody></table></div><div class="paso"><div class="paso-t"><span class="pn">7</span>Se cubren los ceros con 5 líneas. Líneas: filas Pedro, Diego y columnas Cursor Teams 1, Cursor Teams 2, Claude Premium. Como son menos de 6, todavía no se puede asignar.</div><table class="mat"><thead><tr><th></th><th class="num">Cursor Teams 1</th><th class="num">Cursor Teams 2</th><th class="num">Claude Premium</th><th class="num">Claude Standard</th><th class="num">Solo API 1</th><th class="num">Solo API 2</th></tr></thead><tbody><tr><th>Ana</th><td class="num cub">160</td><td class="num cub">160</td><td class="num cub cero">0</td><td class="num ">140</td><td class="num ">172</td><td class="num ">172</td></tr><tr><th>Luis</th><td class="num cub cero">0</td><td class="num cub cero">0</td><td class="num cub">120</td><td class="num ">72</td><td class="num ">72</td><td class="num ">72</td></tr><tr><th>Sara</th><td class="num cub cero">0</td><td class="num cub cero">0</td><td class="num cub">150</td><td class="num ">17</td><td class="num ">17</td><td class="num ">17</td></tr><tr><th>Pedro</th><td class="num cub2">20</td><td class="num cub2">20</td><td class="num cub2 cero">0</td><td class="num cub cero">0</td><td class="num cub">32</td><td class="num cub">32</td></tr><tr><th>Carla</th><td class="num cub cero">0</td><td class="num cub cero">0</td><td class="num cub cero">0</td><td class="num ">12</td><td class="num ">12</td><td class="num ">12</td></tr><tr><th>Diego</th><td class="num cub2">18</td><td class="num cub2">18</td><td class="num cub2">168</td><td class="num cub cero">0</td><td class="num cub cero">0</td><td class="num cub cero">0</td></tr></tbody></table></div><div class="paso"><div class="paso-t"><span class="pn">8</span>Se resta 12 a lo no cubierto y se suma en los cruces: δ = 12 es el menor valor que quedó sin cubrir.</div><table class="mat"><thead><tr><th></th><th class="num">Cursor Teams 1</th><th class="num">Cursor Teams 2</th><th class="num">Claude Premium</th><th class="num">Claude Standard</th><th class="num">Solo API 1</th><th class="num">Solo API 2</th></tr></thead><tbody><tr><th>Ana</th><td class="num ">160</td><td class="num ">160</td><td class="num cero">0</td><td class="num ">128</td><td class="num ">160</td><td class="num ">160</td></tr><tr><th>Luis</th><td class="num cero">0</td><td class="num cero">0</td><td class="num ">120</td><td class="num ">60</td><td class="num ">60</td><td class="num ">60</td></tr><tr><th>Sara</th><td class="num cero">0</td><td class="num cero">0</td><td class="num ">150</td><td class="num ">5</td><td class="num ">5</td><td class="num ">5</td></tr><tr><th>Pedro</th><td class="num ">32</td><td class="num ">32</td><td class="num ">12</td><td class="num cero">0</td><td class="num ">32</td><td class="num ">32</td></tr><tr><th>Carla</th><td class="num cero">0</td><td class="num cero">0</td><td class="num cero">0</td><td class="num cero">0</td><td class="num cero">0</td><td class="num cero">0</td></tr><tr><th>Diego</th><td class="num ">30</td><td class="num ">30</td><td class="num ">180</td><td class="num cero">0</td><td class="num cero">0</td><td class="num cero">0</td></tr></tbody></table></div><div class="paso"><div class="paso-t"><span class="pn">9</span>Se cubren los ceros con 6 líneas. Líneas: filas Ana, Luis, Sara, Pedro, Carla, Diego. Como hay 6 líneas, ya se puede asignar.</div><table class="mat"><thead><tr><th></th><th class="num">Cursor Teams 1</th><th class="num">Cursor Teams 2</th><th class="num">Claude Premium</th><th class="num">Claude Standard</th><th class="num">Solo API 1</th><th class="num">Solo API 2</th></tr></thead><tbody><tr><th>Ana</th><td class="num cub">160</td><td class="num cub">160</td><td class="num cub cero">0</td><td class="num cub">128</td><td class="num cub">160</td><td class="num cub">160</td></tr><tr><th>Luis</th><td class="num cub cero">0</td><td class="num cub cero">0</td><td class="num cub">120</td><td class="num cub">60</td><td class="num cub">60</td><td class="num cub">60</td></tr><tr><th>Sara</th><td class="num cub cero">0</td><td class="num cub cero">0</td><td class="num cub">150</td><td class="num cub">5</td><td class="num cub">5</td><td class="num cub">5</td></tr><tr><th>Pedro</th><td class="num cub">32</td><td class="num cub">32</td><td class="num cub">12</td><td class="num cub cero">0</td><td class="num cub">32</td><td class="num cub">32</td></tr><tr><th>Carla</th><td class="num cub cero">0</td><td class="num cub cero">0</td><td class="num cub cero">0</td><td class="num cub cero">0</td><td class="num cub cero">0</td><td class="num cub cero">0</td></tr><tr><th>Diego</th><td class="num cub">30</td><td class="num cub">30</td><td class="num cub">180</td><td class="num cub cero">0</td><td class="num cub cero">0</td><td class="num cub cero">0</td></tr></tbody></table></div><div class="paso"><div class="paso-t"><span class="pn">10</span>Asignación óptima sobre los ceros</div><table class="mat"><thead><tr><th></th><th class="num">Cursor Teams 1</th><th class="num">Cursor Teams 2</th><th class="num">Claude Premium</th><th class="num">Claude Standard</th><th class="num">Solo API 1</th><th class="num">Solo API 2</th></tr></thead><tbody><tr><th>Ana</th><td class="num ">160</td><td class="num ">160</td><td class="num cero asig">0</td><td class="num ">128</td><td class="num ">160</td><td class="num ">160</td></tr><tr><th>Luis</th><td class="num cero">0</td><td class="num cero asig">0</td><td class="num ">120</td><td class="num ">60</td><td class="num ">60</td><td class="num ">60</td></tr><tr><th>Sara</th><td class="num cero asig">0</td><td class="num cero">0</td><td class="num ">150</td><td class="num ">5</td><td class="num ">5</td><td class="num ">5</td></tr><tr><th>Pedro</th><td class="num ">32</td><td class="num ">32</td><td class="num ">12</td><td class="num cero asig">0</td><td class="num ">32</td><td class="num ">32</td></tr><tr><th>Carla</th><td class="num cero">0</td><td class="num cero">0</td><td class="num cero">0</td><td class="num cero">0</td><td class="num cero">0</td><td class="num cero asig">0</td></tr><tr><th>Diego</th><td class="num ">30</td><td class="num ">30</td><td class="num ">180</td><td class="num cero">0</td><td class="num cero asig">0</td><td class="num cero">0</td></tr></tbody></table></div></div>
+<h2>4.3 Resultado</h2>
+<table class=""><thead><tr><th class="">Persona</th><th class="">Cupo asignado</th><th class="num">Cuota</th><th class="num">Bolsa que aprovecha</th><th class="num">Gasto mes pasado</th><th class="num">Costo c<sub>ij</sub></th></tr></thead><tbody><tr><td class="">Ana</td><td class="">Claude Premium</td><td class="num">100</td><td class="num">400</td><td class="num">420</td><td class="num">120</td></tr><tr><td class="">Luis</td><td class="">Cursor Teams 2</td><td class="num">30</td><td class="num">150</td><td class="num">180</td><td class="num">60</td></tr><tr><td class="">Sara</td><td class="">Cursor Teams 1</td><td class="num">30</td><td class="num">150</td><td class="num">95</td><td class="num">30</td></tr><tr><td class="">Pedro</td><td class="">Claude Standard</td><td class="num">25</td><td class="num">80</td><td class="num">260</td><td class="num">205</td></tr><tr><td class="">Carla</td><td class="">Solo API 2</td><td class="num">0</td><td class="num">0</td><td class="num">310</td><td class="num">310</td></tr><tr><td class="">Diego</td><td class="">Solo API 1</td><td class="num">0</td><td class="num">0</td><td class="num">60</td><td class="num">60</td></tr><tr><td class=""><b>Total</b></td><td class=""></td><td class="num "><b>185</b></td><td class="num"></td><td class="num"></td><td class="num "><b>785</b></td></tr></tbody></table>
+<p>El costo mínimo es <b>785 USD</b>, contra 1.325 USD si todos siguieran por API. La función
+<code>linear_sum_assignment</code> de SciPy da el mismo valor (785 USD). Lo que pasa al Modelo 1 es la
+<b>bolsa</b> que trae el plan de cada persona: Ana 400, Luis 150, Sara 150,
+Pedro 80, Carla 0 y Diego 0 USD. Las cuotas suman
+185 USD y son un costo fijo del mes.</p>
+
+<h1 id="s5">5. Modelo 1: cuánto debe usar cada persona</h1>
+<h2>5.1 Planteamiento</h2>
+<div class="modelo">
+<p><b>Variables:</b> g<sub>d,k</sub> = dólares de uso de la persona <i>d</i> en el tramo <i>k</i> (k = 1, 2, 3);
+e<sub>d</sub> = uso extra de la persona <i>d</i>, el que no cubre la bolsa de su plan.</p>
+<p><b>Maximizar</b> Z = Σ<sub>d</sub> Σ<sub>k</sub> r<sub>d,k</sub> g<sub>d,k</sub> − Σ<sub>d</sub> c<sub>d</sub> e<sub>d</sub>
+&nbsp;&nbsp;(valor del tiempo ahorrado menos lo que se paga aparte)</p>
+<p><b>Sujeto a</b>, para cada persona <i>d</i>:</p>
+<p class="sang">Σ<sub>k</sub> g<sub>d,k</sub> − e<sub>d</sub> ≤ bolsa<sub>d</sub> &nbsp;&nbsp;(lo que pasa de la bolsa es extra)</p>
+<p class="sang">Σ<sub>k</sub> g<sub>d,k</sub> ≤ 0,15 × salario<sub>d</sub> &nbsp;&nbsp;(tope por persona)</p>
+<p class="sang">Σ<sub>k</sub> g<sub>d,k</sub> ≥ 50 &nbsp;&nbsp;(mínimo por persona)</p>
+<p class="sang">0 ≤ g<sub>d,k</sub> ≤ ancho<sub>k</sub> = 100, 150, 250 &nbsp;·&nbsp; e<sub>d</sub> ≥ 0</p>
+<p>y para la empresa: Σ<sub>d</sub> e<sub>d</sub> ≤ B = 720 USD &nbsp;&nbsp;(presupuesto de gasto extra)</p>
+</div>
+<p>Con 6 personas el modelo tiene 24 variables (18 de tramos y 6 de extra) y 19 restricciones más las cotas de los
+tramos. El costo c<sub>d</sub> de un dólar extra empieza en 1 USD (precio de API) y el Modelo 2 lo confirma o lo corrige.
+Se resolvió con el Simplex de HiGHS (<code>scipy.optimize.linprog</code>) en 8 iteraciones; el mismo
+modelo está en la hoja "Modelo 1 reparto" del Excel para Solver.</p>
+<h2>5.2 Solución</h2>
+<table class=""><thead><tr><th class="">Persona</th><th class="num">Bolsa</th><th class="num">Tope</th><th class="num">g<sub>1</sub></th><th class="num">g<sub>2</sub></th><th class="num">g<sub>3</sub></th><th class="num">Uso óptimo</th><th class="num">Extra e<sub>d</sub></th></tr></thead><tbody><tr><td class="">Ana</td><td class="num">400</td><td class="num">360</td><td class="num">100</td><td class="num">150</td><td class="num">110</td><td class="num "><b>360</b></td><td class="num">0</td></tr><tr><td class="">Luis</td><td class="num">150</td><td class="num">300</td><td class="num">100</td><td class="num">150</td><td class="num">0</td><td class="num "><b>250</b></td><td class="num">100</td></tr><tr><td class="">Sara</td><td class="num">150</td><td class="num">255</td><td class="num">100</td><td class="num">50</td><td class="num">0</td><td class="num "><b>150</b></td><td class="num">0</td></tr><tr><td class="">Pedro</td><td class="num">80</td><td class="num">285</td><td class="num">100</td><td class="num">150</td><td class="num">0</td><td class="num "><b>250</b></td><td class="num">170</td></tr><tr><td class="">Carla</td><td class="num">0</td><td class="num">330</td><td class="num">100</td><td class="num">150</td><td class="num">0</td><td class="num "><b>250</b></td><td class="num">250</td></tr><tr><td class="">Diego</td><td class="num">0</td><td class="num">270</td><td class="num">100</td><td class="num">100</td><td class="num">0</td><td class="num "><b>200</b></td><td class="num">200</td></tr><tr><td class=""><b>Total</b></td><td class="num"></td><td class="num"></td><td class="num"></td><td class="num"></td><td class="num"></td><td class="num "><b>1.460</b></td><td class="num "><b>720</b></td></tr></tbody></table>
+<p>El valor del tiempo ahorrado es <b>2.528,5 USD</b> y el gasto extra usa todo el presupuesto
+(720 USD), así que Z = 2.528,5 − 720 =
+<b>1.808,5</b>. Se lee así:</p>
+<ul>
+<li><b>Ana</b> llega a su tope de 360 USD, que cabe en su bolsa de 400: no genera gasto extra.</li>
+<li><b>Sara</b> usa solo su bolsa (150 USD): su tramo 2 vale 1,062 USD por dólar, pero se
+compite por el presupuesto con personas que rinden más.</li>
+<li><b>Luis, Pedro y Carla</b> llenan sus tramos 1 y 2 (250 USD). Su tramo 3 rinde menos de 1 USD por dólar, menos de lo
+que cuesta, así que no se usa.</li>
+<li><b>Diego</b> es la persona marginal: se queda a mitad del tramo 2 (200 USD) porque ahí se acaba el presupuesto.</li>
+</ul>
+<figure><svg xmlns:xlink="http://www.w3.org/1999/xlink" width="408.699453pt" height="189.051648pt" viewBox="0 0 408.699453 189.051648" xmlns="http://www.w3.org/2000/svg" version="1.1">
+ <metadata>
+  <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+   <cc:Work>
+    <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+    <dc:date>2026-11-25T14:39:41.223100</dc:date>
+    <dc:format>image/svg+xml</dc:format>
+    <dc:creator>
+     <cc:Agent>
+      <dc:title>Matplotlib v3.11.2, https://matplotlib.org/</dc:title>
+     </cc:Agent>
+    </dc:creator>
+   </cc:Work>
+  </rdf:RDF>
+ </metadata>
+ <defs>
+  <style type="text/css">*{stroke-linejoin: round; stroke-linecap: butt}</style>
+ </defs>
+ <g id="figure_1">
+  <g id="patch_1">
+   <path d="M 0 189.051648 
+L 408.699453 189.051648 
+L 408.699453 0 
+L 0 0 
+z
+" style="fill: #ffffff"/>
+  </g>
+  <g id="axes_1">
+   <g id="patch_2">
+    <path d="M 44.379453 165.850945 
+L 401.499453 165.850945 
+L 401.499453 10.618945 
+L 44.379453 10.618945 
+z
+" style="fill: #ffffff"/>
+   </g>
+   <g id="matplotlib.axis_1">
+    <g id="xtick_1">
+     <g id="line2d_1">
+      <defs>
+       <path id="mdcc1830c6c" d="M 0 0 
+L 0 3.5 
+" style="stroke: #333333; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#mdcc1830c6c" x="83.960624" y="165.850945" style="fill: #333333; stroke: #333333; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_1">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #333333" x="83.960624" y="179.688836" transform="rotate(-0 83.960624 179.688836)">Ana</text>
+     </g>
+    </g>
+    <g id="xtick_2">
+     <g id="line2d_2">
+      <g>
+       <use xlink:href="#mdcc1830c6c" x="139.552155" y="165.850945" style="fill: #333333; stroke: #333333; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_2">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #333333" x="139.552155" y="179.689539" transform="rotate(-0 139.552155 179.689539)">Luis</text>
+     </g>
+    </g>
+    <g id="xtick_3">
+     <g id="line2d_3">
+      <g>
+       <use xlink:href="#mdcc1830c6c" x="195.143687" y="165.850945" style="fill: #333333; stroke: #333333; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_3">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #333333" x="195.143687" y="179.688836" transform="rotate(-0 195.143687 179.688836)">Sara</text>
+     </g>
+    </g>
+    <g id="xtick_4">
+     <g id="line2d_4">
+      <g>
+       <use xlink:href="#mdcc1830c6c" x="250.735219" y="165.850945" style="fill: #333333; stroke: #333333; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_4">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #333333" x="250.735219" y="179.689539" transform="rotate(-0 250.735219 179.689539)">Pedro</text>
+     </g>
+    </g>
+    <g id="xtick_5">
+     <g id="line2d_5">
+      <g>
+       <use xlink:href="#mdcc1830c6c" x="306.326751" y="165.850945" style="fill: #333333; stroke: #333333; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_5">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #333333" x="306.326751" y="179.689539" transform="rotate(-0 306.326751 179.689539)">Carla</text>
+     </g>
+    </g>
+    <g id="xtick_6">
+     <g id="line2d_6">
+      <g>
+       <use xlink:href="#mdcc1830c6c" x="361.918283" y="165.850945" style="fill: #333333; stroke: #333333; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_6">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #333333" x="361.918283" y="179.689539" transform="rotate(-0 361.918283 179.689539)">Diego</text>
+     </g>
+    </g>
+   </g>
+   <g id="matplotlib.axis_2">
+    <g id="ytick_1">
+     <g id="line2d_7">
+      <path d="M 44.379453 165.850945 
+L 401.499453 165.850945 
+" clip-path="url(#pfe3b3a2c67)" style="fill: none; stroke: #e6e6e6; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_8">
+      <defs>
+       <path id="md0e18c3069" d="M 0 0 
+L -3.5 0 
+" style="stroke: #333333; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#md0e18c3069" x="44.379453" y="165.850945" style="fill: #333333; stroke: #333333; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_7">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: end; fill: #333333" x="37.379453" y="169.269891" transform="rotate(-0 37.379453 169.269891)">0</text>
+     </g>
+    </g>
+    <g id="ytick_2">
+     <g id="line2d_9">
+      <path d="M 44.379453 134.804545 
+L 401.499453 134.804545 
+" clip-path="url(#pfe3b3a2c67)" style="fill: none; stroke: #e6e6e6; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_10">
+      <g>
+       <use xlink:href="#md0e18c3069" x="44.379453" y="134.804545" style="fill: #333333; stroke: #333333; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_8">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: end; fill: #333333" x="37.379453" y="138.223491" transform="rotate(-0 37.379453 138.223491)">100</text>
+     </g>
+    </g>
+    <g id="ytick_3">
+     <g id="line2d_11">
+      <path d="M 44.379453 103.758145 
+L 401.499453 103.758145 
+" clip-path="url(#pfe3b3a2c67)" style="fill: none; stroke: #e6e6e6; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_12">
+      <g>
+       <use xlink:href="#md0e18c3069" x="44.379453" y="103.758145" style="fill: #333333; stroke: #333333; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_9">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: end; fill: #333333" x="37.379453" y="107.177091" transform="rotate(-0 37.379453 107.177091)">200</text>
+     </g>
+    </g>
+    <g id="ytick_4">
+     <g id="line2d_13">
+      <path d="M 44.379453 72.711745 
+L 401.499453 72.711745 
+" clip-path="url(#pfe3b3a2c67)" style="fill: none; stroke: #e6e6e6; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_14">
+      <g>
+       <use xlink:href="#md0e18c3069" x="44.379453" y="72.711745" style="fill: #333333; stroke: #333333; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_10">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: end; fill: #333333" x="37.379453" y="76.130691" transform="rotate(-0 37.379453 76.130691)">300</text>
+     </g>
+    </g>
+    <g id="ytick_5">
+     <g id="line2d_15">
+      <path d="M 44.379453 41.665345 
+L 401.499453 41.665345 
+" clip-path="url(#pfe3b3a2c67)" style="fill: none; stroke: #e6e6e6; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_16">
+      <g>
+       <use xlink:href="#md0e18c3069" x="44.379453" y="41.665345" style="fill: #333333; stroke: #333333; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_11">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: end; fill: #333333" x="37.379453" y="45.084291" transform="rotate(-0 37.379453 45.084291)">400</text>
+     </g>
+    </g>
+    <g id="ytick_6">
+     <g id="line2d_17">
+      <path d="M 44.379453 10.618945 
+L 401.499453 10.618945 
+" clip-path="url(#pfe3b3a2c67)" style="fill: none; stroke: #e6e6e6; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_18">
+      <g>
+       <use xlink:href="#md0e18c3069" x="44.379453" y="10.618945" style="fill: #333333; stroke: #333333; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_12">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: end; fill: #333333" x="37.379453" y="14.037891" transform="rotate(-0 37.379453 14.037891)">500</text>
+     </g>
+    </g>
+    <g id="text_13">
+     <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #222222" x="14.038594" y="88.234945" transform="rotate(-90 14.038594 88.234945)">USD de uso al mes</text>
+    </g>
+   </g>
+   <g id="patch_3">
+    <path d="M 62.835842 165.850945 
+L 82.848793 165.850945 
+L 82.848793 35.456065 
+L 62.835842 35.456065 
+z
+" clip-path="url(#pfe3b3a2c67)" style="fill: #9a9aa2"/>
+   </g>
+   <g id="patch_4">
+    <path d="M 118.427373 165.850945 
+L 138.440325 165.850945 
+L 138.440325 109.967425 
+L 118.427373 109.967425 
+z
+" clip-path="url(#pfe3b3a2c67)" style="fill: #9a9aa2"/>
+   </g>
+   <g id="patch_5">
+    <path d="M 174.018905 165.850945 
+L 194.031857 165.850945 
+L 194.031857 136.356865 
+L 174.018905 136.356865 
+z
+" clip-path="url(#pfe3b3a2c67)" style="fill: #9a9aa2"/>
+   </g>
+   <g id="patch_6">
+    <path d="M 229.610437 165.850945 
+L 249.623388 165.850945 
+L 249.623388 85.130305 
+L 229.610437 85.130305 
+z
+" clip-path="url(#pfe3b3a2c67)" style="fill: #9a9aa2"/>
+   </g>
+   <g id="patch_7">
+    <path d="M 285.201969 165.850945 
+L 305.21492 165.850945 
+L 305.21492 69.607105 
+L 285.201969 69.607105 
+z
+" clip-path="url(#pfe3b3a2c67)" style="fill: #9a9aa2"/>
+   </g>
+   <g id="patch_8">
+    <path d="M 340.7935 165.850945 
+L 360.806452 165.850945 
+L 360.806452 147.223105 
+L 340.7935 147.223105 
+z
+" clip-path="url(#pfe3b3a2c67)" style="fill: #9a9aa2"/>
+   </g>
+   <g id="patch_9">
+    <path d="M 85.072454 165.850945 
+L 105.085406 165.850945 
+L 105.085406 54.083905 
+L 85.072454 54.083905 
+z
+" clip-path="url(#pfe3b3a2c67)" style="fill: #2f7fd8"/>
+   </g>
+   <g id="patch_10">
+    <path d="M 140.663986 165.850945 
+L 160.676938 165.850945 
+L 160.676938 119.281345 
+L 140.663986 119.281345 
+z
+" clip-path="url(#pfe3b3a2c67)" style="fill: #2f7fd8"/>
+   </g>
+   <g id="patch_11">
+    <path d="M 196.255518 165.850945 
+L 216.268469 165.850945 
+L 216.268469 119.281345 
+L 196.255518 119.281345 
+z
+" clip-path="url(#pfe3b3a2c67)" style="fill: #2f7fd8"/>
+   </g>
+   <g id="patch_12">
+    <path d="M 251.84705 165.850945 
+L 271.860001 165.850945 
+L 271.860001 141.013825 
+L 251.84705 141.013825 
+z
+" clip-path="url(#pfe3b3a2c67)" style="fill: #2f7fd8"/>
+   </g>
+   <g id="patch_13">
+    <path d="M 307.438581 165.850945 
+L 327.451533 165.850945 
+L 327.451533 165.850945 
+L 307.438581 165.850945 
+z
+" clip-path="url(#pfe3b3a2c67)" style="fill: #2f7fd8"/>
+   </g>
+   <g id="patch_14">
+    <path d="M 363.030113 165.850945 
+L 383.043065 165.850945 
+L 383.043065 165.850945 
+L 363.030113 165.850945 
+z
+" clip-path="url(#pfe3b3a2c67)" style="fill: #2f7fd8"/>
+   </g>
+   <g id="patch_15">
+    <path d="M 85.072454 54.083905 
+L 105.085406 54.083905 
+L 105.085406 54.083905 
+L 85.072454 54.083905 
+z
+" clip-path="url(#pfe3b3a2c67)" style="fill: #8a4fe0"/>
+   </g>
+   <g id="patch_16">
+    <path d="M 140.663986 119.281345 
+L 160.676938 119.281345 
+L 160.676938 88.234945 
+L 140.663986 88.234945 
+z
+" clip-path="url(#pfe3b3a2c67)" style="fill: #8a4fe0"/>
+   </g>
+   <g id="patch_17">
+    <path d="M 196.255518 119.281345 
+L 216.268469 119.281345 
+L 216.268469 119.281345 
+L 196.255518 119.281345 
+z
+" clip-path="url(#pfe3b3a2c67)" style="fill: #8a4fe0"/>
+   </g>
+   <g id="patch_18">
+    <path d="M 251.84705 141.013825 
+L 271.860001 141.013825 
+L 271.860001 88.234945 
+L 251.84705 88.234945 
+z
+" clip-path="url(#pfe3b3a2c67)" style="fill: #8a4fe0"/>
+   </g>
+   <g id="patch_19">
+    <path d="M 307.438581 165.850945 
+L 327.451533 165.850945 
+L 327.451533 88.234945 
+L 307.438581 88.234945 
+z
+" clip-path="url(#pfe3b3a2c67)" style="fill: #8a4fe0"/>
+   </g>
+   <g id="patch_20">
+    <path d="M 363.030113 165.850945 
+L 383.043065 165.850945 
+L 383.043065 103.758145 
+L 363.030113 103.758145 
+z
+" clip-path="url(#pfe3b3a2c67)" style="fill: #8a4fe0"/>
+   </g>
+   <g id="line2d_19">
+    <path d="M 60.61218 54.083905 
+L 107.309067 54.083905 
+" clip-path="url(#pfe3b3a2c67)" style="fill: none; stroke-dasharray: 3.7,1.6; stroke-dashoffset: 0; stroke: #222222"/>
+   </g>
+   <g id="line2d_20">
+    <path d="M 116.203712 72.711745 
+L 162.900599 72.711745 
+" clip-path="url(#pfe3b3a2c67)" style="fill: none; stroke-dasharray: 3.7,1.6; stroke-dashoffset: 0; stroke: #222222"/>
+   </g>
+   <g id="line2d_21">
+    <path d="M 171.795244 86.682625 
+L 218.492131 86.682625 
+" clip-path="url(#pfe3b3a2c67)" style="fill: none; stroke-dasharray: 3.7,1.6; stroke-dashoffset: 0; stroke: #222222"/>
+   </g>
+   <g id="line2d_22">
+    <path d="M 227.386776 77.368705 
+L 274.083662 77.368705 
+" clip-path="url(#pfe3b3a2c67)" style="fill: none; stroke-dasharray: 3.7,1.6; stroke-dashoffset: 0; stroke: #222222"/>
+   </g>
+   <g id="line2d_23">
+    <path d="M 282.978307 63.397825 
+L 329.675194 63.397825 
+" clip-path="url(#pfe3b3a2c67)" style="fill: none; stroke-dasharray: 3.7,1.6; stroke-dashoffset: 0; stroke: #222222"/>
+   </g>
+   <g id="line2d_24">
+    <path d="M 338.569839 82.025665 
+L 385.266726 82.025665 
+" clip-path="url(#pfe3b3a2c67)" style="fill: none; stroke-dasharray: 3.7,1.6; stroke-dashoffset: 0; stroke: #222222"/>
+   </g>
+   <g id="line2d_25"/>
+   <g id="patch_21">
+    <path d="M 44.379453 165.850945 
+L 44.379453 10.618945 
+" style="fill: none; stroke: #444444; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="patch_22">
+    <path d="M 44.379453 165.850945 
+L 401.499453 165.850945 
+" style="fill: none; stroke: #444444; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="legend_1">
+    <g id="line2d_26">
+     <path d="M 129.850625 20.742773 
+L 137.350625 20.742773 
+L 144.850625 20.742773 
+" style="fill: none; stroke-dasharray: 3.7,1.6; stroke-dashoffset: 0; stroke: #222222"/>
+    </g>
+    <g id="text_14">
+     <text style="font-size: 7.5px; font-family: 'DejaVu Sans'; text-anchor: start" x="150.850625" y="23.367773" transform="rotate(-0 150.850625 23.367773)">Tope (15 % del salario)</text>
+    </g>
+    <g id="patch_23">
+     <path d="M 129.850625 34.618359 
+L 144.850625 34.618359 
+L 144.850625 29.368359 
+L 129.850625 29.368359 
+z
+" style="fill: #9a9aa2"/>
+    </g>
+    <g id="text_15">
+     <text style="font-size: 7.5px; font-family: 'DejaVu Sans'; text-anchor: start" x="150.850625" y="34.618359" transform="rotate(-0 150.850625 34.618359)">Gasto del mes pasado</text>
+    </g>
+    <g id="patch_24">
+     <path d="M 251.577969 23.367773 
+L 266.577969 23.367773 
+L 266.577969 18.117773 
+L 251.577969 18.117773 
+z
+" style="fill: #2f7fd8"/>
+    </g>
+    <g id="text_16">
+     <text style="font-size: 7.5px; font-family: 'DejaVu Sans'; text-anchor: start" x="272.577969" y="23.367773" transform="rotate(-0 272.577969 23.367773)">Uso óptimo cubierto por la bolsa</text>
+    </g>
+    <g id="patch_25">
+     <path d="M 251.577969 34.918359 
+L 266.577969 34.918359 
+L 266.577969 29.668359 
+L 251.577969 29.668359 
+z
+" style="fill: #8a4fe0"/>
+    </g>
+    <g id="text_17">
+     <text style="font-size: 7.5px; font-family: 'DejaVu Sans'; text-anchor: start" x="272.577969" y="34.918359" transform="rotate(-0 272.577969 34.918359)">Uso óptimo extra</text>
+    </g>
+   </g>
+  </g>
+ </g>
+ <defs>
+  <clipPath id="pfe3b3a2c67">
+   <rect x="44.379453" y="10.618945" width="357.12" height="155.232"/>
+  </clipPath>
+ </defs>
+</svg>
+<figcaption>Figura 3. Gasto del mes pasado contra el uso óptimo de cada persona.</figcaption></figure>
+
+<h1 id="s6">6. Vista por equipos: método gráfico y Simplex en tabla</h1>
+<p>Para poder resolver a mano, el Modelo 1 se agrupa por equipos. Se supone que cada dólar extra rinde lo mismo dentro
+de cada equipo (2,5 USD en Backend y 1,8 USD en Frontend) y queda un
+problema de dos variables.</p>
+<h2>6.1 Planteamiento</h2>
+<div class="modelo">
+<p><b>Variables:</b> x<sub>1</sub> = gasto extra del equipo Backend, x<sub>2</sub> = gasto extra del equipo Frontend (USD).</p>
+<p><b>Maximizar</b> Z = 2,5 x<sub>1</sub> + 1,8 x<sub>2</sub></p>
+<p><b>Sujeto a</b></p>
+<p class="sang">x<sub>1</sub> + x<sub>2</sub> ≤ 720 &nbsp;&nbsp;(presupuesto)</p>
+<p class="sang">x<sub>1</sub> ≤ 460 &nbsp;&nbsp;(tope Backend: Σ máx(0, tope − bolsa) = 0 + 150 + 105 + 205)</p>
+<p class="sang">x<sub>2</sub> ≤ 600 &nbsp;&nbsp;(tope Frontend: 330 + 270, no tienen bolsa)</p>
+<p class="sang">x<sub>2</sub> ≥ 100 &nbsp;&nbsp;(mínimo Frontend: 50 + 50) &nbsp;·&nbsp; x<sub>1</sub>, x<sub>2</sub> ≥ 0</p>
+</div>
+<h2>6.2 Método gráfico</h2>
+<p>Se dibuja cada restricción como una recta, se marca la región que cumple todas y se evalúa Z en cada vértice. La
+recta de Z se desplaza en la dirección de crecimiento (gradiente (2,5; 1,8)) hasta el último punto que toca la región.</p>
+<figure><svg xmlns:xlink="http://www.w3.org/1999/xlink" width="364.059453pt" height="265.160703pt" viewBox="0 0 364.059453 265.160703" xmlns="http://www.w3.org/2000/svg" version="1.1">
+ <metadata>
+  <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+   <cc:Work>
+    <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+    <dc:date>2026-11-25T14:39:41.317548</dc:date>
+    <dc:format>image/svg+xml</dc:format>
+    <dc:creator>
+     <cc:Agent>
+      <dc:title>Matplotlib v3.11.2, https://matplotlib.org/</dc:title>
+     </cc:Agent>
+    </dc:creator>
+   </cc:Work>
+  </rdf:RDF>
+ </metadata>
+ <defs>
+  <style type="text/css">*{stroke-linejoin: round; stroke-linecap: butt}</style>
+ </defs>
+ <g id="figure_1">
+  <g id="patch_1">
+   <path d="M 0 265.160703 
+L 364.059453 265.160703 
+L 364.059453 0 
+L 0 0 
+z
+" style="fill: #ffffff"/>
+  </g>
+  <g id="axes_1">
+   <g id="patch_2">
+    <path d="M 44.379453 228.96 
+L 356.859453 228.96 
+L 356.859453 7.2 
+L 44.379453 7.2 
+z
+" style="fill: #ffffff"/>
+   </g>
+   <g id="matplotlib.axis_1">
+    <g id="xtick_1">
+     <g id="line2d_1">
+      <path d="M 44.379453 228.96 
+L 44.379453 7.2 
+" clip-path="url(#p96fed57637)" style="fill: none; stroke: #e6e6e6; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_2">
+      <defs>
+       <path id="m92c1e46226" d="M 0 0 
+L 0 3.5 
+" style="stroke: #333333; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#m92c1e46226" x="44.379453" y="228.96" style="fill: #333333; stroke: #333333; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_1">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #333333" x="44.379453" y="242.797891" transform="rotate(-0 44.379453 242.797891)">0</text>
+     </g>
+    </g>
+    <g id="xtick_2">
+     <g id="line2d_3">
+      <path d="M 85.495243 228.96 
+L 85.495243 7.2 
+" clip-path="url(#p96fed57637)" style="fill: none; stroke: #e6e6e6; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_4">
+      <g>
+       <use xlink:href="#m92c1e46226" x="85.495243" y="228.96" style="fill: #333333; stroke: #333333; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_2">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #333333" x="85.495243" y="242.797891" transform="rotate(-0 85.495243 242.797891)">100</text>
+     </g>
+    </g>
+    <g id="xtick_3">
+     <g id="line2d_5">
+      <path d="M 126.611032 228.96 
+L 126.611032 7.2 
+" clip-path="url(#p96fed57637)" style="fill: none; stroke: #e6e6e6; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_6">
+      <g>
+       <use xlink:href="#m92c1e46226" x="126.611032" y="228.96" style="fill: #333333; stroke: #333333; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_3">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #333333" x="126.611032" y="242.797891" transform="rotate(-0 126.611032 242.797891)">200</text>
+     </g>
+    </g>
+    <g id="xtick_4">
+     <g id="line2d_7">
+      <path d="M 167.726822 228.96 
+L 167.726822 7.2 
+" clip-path="url(#p96fed57637)" style="fill: none; stroke: #e6e6e6; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_8">
+      <g>
+       <use xlink:href="#m92c1e46226" x="167.726822" y="228.96" style="fill: #333333; stroke: #333333; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_4">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #333333" x="167.726822" y="242.797891" transform="rotate(-0 167.726822 242.797891)">300</text>
+     </g>
+    </g>
+    <g id="xtick_5">
+     <g id="line2d_9">
+      <path d="M 208.842611 228.96 
+L 208.842611 7.2 
+" clip-path="url(#p96fed57637)" style="fill: none; stroke: #e6e6e6; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_10">
+      <g>
+       <use xlink:href="#m92c1e46226" x="208.842611" y="228.96" style="fill: #333333; stroke: #333333; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_5">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #333333" x="208.842611" y="242.797891" transform="rotate(-0 208.842611 242.797891)">400</text>
+     </g>
+    </g>
+    <g id="xtick_6">
+     <g id="line2d_11">
+      <path d="M 249.9584 228.96 
+L 249.9584 7.2 
+" clip-path="url(#p96fed57637)" style="fill: none; stroke: #e6e6e6; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_12">
+      <g>
+       <use xlink:href="#m92c1e46226" x="249.9584" y="228.96" style="fill: #333333; stroke: #333333; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_6">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #333333" x="249.9584" y="242.797891" transform="rotate(-0 249.9584 242.797891)">500</text>
+     </g>
+    </g>
+    <g id="xtick_7">
+     <g id="line2d_13">
+      <path d="M 291.07419 228.96 
+L 291.07419 7.2 
+" clip-path="url(#p96fed57637)" style="fill: none; stroke: #e6e6e6; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_14">
+      <g>
+       <use xlink:href="#m92c1e46226" x="291.07419" y="228.96" style="fill: #333333; stroke: #333333; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_7">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #333333" x="291.07419" y="242.797891" transform="rotate(-0 291.07419 242.797891)">600</text>
+     </g>
+    </g>
+    <g id="xtick_8">
+     <g id="line2d_15">
+      <path d="M 332.189979 228.96 
+L 332.189979 7.2 
+" clip-path="url(#p96fed57637)" style="fill: none; stroke: #e6e6e6; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_16">
+      <g>
+       <use xlink:href="#m92c1e46226" x="332.189979" y="228.96" style="fill: #333333; stroke: #333333; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_8">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #333333" x="332.189979" y="242.797891" transform="rotate(-0 332.189979 242.797891)">700</text>
+     </g>
+    </g>
+    <g id="text_9">
+     <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #222222" x="200.619453" y="255.798594" transform="rotate(-0 200.619453 255.798594)">x₁: gasto extra del equipo Backend (USD)</text>
+    </g>
+   </g>
+   <g id="matplotlib.axis_2">
+    <g id="ytick_1">
+     <g id="line2d_17">
+      <path d="M 44.379453 228.96 
+L 356.859453 228.96 
+" clip-path="url(#p96fed57637)" style="fill: none; stroke: #e6e6e6; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_18">
+      <defs>
+       <path id="m02dca183c5" d="M 0 0 
+L -3.5 0 
+" style="stroke: #333333; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#m02dca183c5" x="44.379453" y="228.96" style="fill: #333333; stroke: #333333; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_10">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: end; fill: #333333" x="37.379453" y="232.378945" transform="rotate(-0 37.379453 232.378945)">0</text>
+     </g>
+    </g>
+    <g id="ytick_2">
+     <g id="line2d_19">
+      <path d="M 44.379453 199.781053 
+L 356.859453 199.781053 
+" clip-path="url(#p96fed57637)" style="fill: none; stroke: #e6e6e6; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_20">
+      <g>
+       <use xlink:href="#m02dca183c5" x="44.379453" y="199.781053" style="fill: #333333; stroke: #333333; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_11">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: end; fill: #333333" x="37.379453" y="203.199998" transform="rotate(-0 37.379453 203.199998)">100</text>
+     </g>
+    </g>
+    <g id="ytick_3">
+     <g id="line2d_21">
+      <path d="M 44.379453 170.602105 
+L 356.859453 170.602105 
+" clip-path="url(#p96fed57637)" style="fill: none; stroke: #e6e6e6; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_22">
+      <g>
+       <use xlink:href="#m02dca183c5" x="44.379453" y="170.602105" style="fill: #333333; stroke: #333333; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_12">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: end; fill: #333333" x="37.379453" y="174.021051" transform="rotate(-0 37.379453 174.021051)">200</text>
+     </g>
+    </g>
+    <g id="ytick_4">
+     <g id="line2d_23">
+      <path d="M 44.379453 141.423158 
+L 356.859453 141.423158 
+" clip-path="url(#p96fed57637)" style="fill: none; stroke: #e6e6e6; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_24">
+      <g>
+       <use xlink:href="#m02dca183c5" x="44.379453" y="141.423158" style="fill: #333333; stroke: #333333; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_13">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: end; fill: #333333" x="37.379453" y="144.842103" transform="rotate(-0 37.379453 144.842103)">300</text>
+     </g>
+    </g>
+    <g id="ytick_5">
+     <g id="line2d_25">
+      <path d="M 44.379453 112.244211 
+L 356.859453 112.244211 
+" clip-path="url(#p96fed57637)" style="fill: none; stroke: #e6e6e6; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_26">
+      <g>
+       <use xlink:href="#m02dca183c5" x="44.379453" y="112.244211" style="fill: #333333; stroke: #333333; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_14">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: end; fill: #333333" x="37.379453" y="115.663156" transform="rotate(-0 37.379453 115.663156)">400</text>
+     </g>
+    </g>
+    <g id="ytick_6">
+     <g id="line2d_27">
+      <path d="M 44.379453 83.065263 
+L 356.859453 83.065263 
+" clip-path="url(#p96fed57637)" style="fill: none; stroke: #e6e6e6; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_28">
+      <g>
+       <use xlink:href="#m02dca183c5" x="44.379453" y="83.065263" style="fill: #333333; stroke: #333333; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_15">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: end; fill: #333333" x="37.379453" y="86.484208" transform="rotate(-0 37.379453 86.484208)">500</text>
+     </g>
+    </g>
+    <g id="ytick_7">
+     <g id="line2d_29">
+      <path d="M 44.379453 53.886316 
+L 356.859453 53.886316 
+" clip-path="url(#p96fed57637)" style="fill: none; stroke: #e6e6e6; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_30">
+      <g>
+       <use xlink:href="#m02dca183c5" x="44.379453" y="53.886316" style="fill: #333333; stroke: #333333; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_16">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: end; fill: #333333" x="37.379453" y="57.305261" transform="rotate(-0 37.379453 57.305261)">600</text>
+     </g>
+    </g>
+    <g id="ytick_8">
+     <g id="line2d_31">
+      <path d="M 44.379453 24.707368 
+L 356.859453 24.707368 
+" clip-path="url(#p96fed57637)" style="fill: none; stroke: #e6e6e6; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_32">
+      <g>
+       <use xlink:href="#m02dca183c5" x="44.379453" y="24.707368" style="fill: #333333; stroke: #333333; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_17">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: end; fill: #333333" x="37.379453" y="28.126314" transform="rotate(-0 37.379453 28.126314)">700</text>
+     </g>
+    </g>
+    <g id="text_18">
+     <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #222222" x="14.038594" y="118.08" transform="rotate(-90 14.038594 118.08)">x₂: gasto extra del equipo Frontend (USD)</text>
+    </g>
+   </g>
+   <g id="patch_3">
+    <path d="M 44.379453 199.781053 
+L 44.379453 53.886316 
+L 93.7184 53.886316 
+L 233.512085 153.094737 
+L 233.512085 199.781053 
+z
+" clip-path="url(#p96fed57637)" style="fill: #2f7fd8; opacity: 0.15; stroke: #2f7fd8; stroke-linejoin: miter"/>
+   </g>
+   <g id="line2d_33">
+    <path d="M 44.379453 18.871579 
+L 365.059453 246.450934 
+L 365.059453 246.450934 
+" clip-path="url(#p96fed57637)" style="fill: none; stroke: #2f7fd8; stroke-width: 1.4; stroke-linecap: square"/>
+   </g>
+   <g id="line2d_34">
+    <path d="M 233.512085 228.96 
+L 233.512085 7.2 
+" clip-path="url(#p96fed57637)" style="fill: none; stroke: #8a4fe0; stroke-width: 1.4; stroke-linecap: square"/>
+   </g>
+   <g id="line2d_35">
+    <path d="M 44.379453 53.886316 
+L 356.859453 53.886316 
+" clip-path="url(#p96fed57637)" style="fill: none; stroke: #e8862a; stroke-width: 1.4; stroke-linecap: square"/>
+   </g>
+   <g id="line2d_36">
+    <path d="M 44.379453 199.781053 
+L 356.859453 199.781053 
+" clip-path="url(#p96fed57637)" style="fill: none; stroke: #2e9e6a; stroke-width: 1.4; stroke-linecap: square"/>
+   </g>
+   <g id="line2d_37">
+    <path d="M 77.17597 -1 
+L 348.222647 266.160703 
+L 348.222647 266.160703 
+" clip-path="url(#p96fed57637)" style="fill: none; stroke-dasharray: 4.44,1.92; stroke-dashoffset: 0; stroke: #d64545; stroke-width: 1.2"/>
+   </g>
+   <g id="line2d_38">
+    <path d="M 44.379453 83.065263 
+L 230.138099 266.160703 
+L 230.138099 266.160703 
+" clip-path="url(#p96fed57637)" style="fill: none; stroke-dasharray: 0.8,1.32; stroke-dashoffset: 0; stroke: #d64545; stroke-opacity: 0.7; stroke-width: 0.8"/>
+   </g>
+   <g id="line2d_39">
+    <defs>
+     <path id="m5b97497224" d="M 0 2 
+C 0.530406 2 1.03916 1.789267 1.414214 1.414214 
+C 1.789267 1.03916 2 0.530406 2 0 
+C 2 -0.530406 1.789267 -1.03916 1.414214 -1.414214 
+C 1.03916 -1.789267 0.530406 -2 0 -2 
+C -0.530406 -2 -1.03916 -1.789267 -1.414214 -1.414214 
+C -1.789267 -1.03916 -2 -0.530406 -2 0 
+C -2 0.530406 -1.789267 1.03916 -1.414214 1.414214 
+C -1.03916 1.789267 -0.530406 2 0 2 
+z
+" style="stroke: #222222"/>
+    </defs>
+    <g clip-path="url(#p96fed57637)">
+     <use xlink:href="#m5b97497224" x="233.512085" y="153.094737" style="fill: #222222; stroke: #222222"/>
+    </g>
+   </g>
+   <g id="line2d_40">
+    <g clip-path="url(#p96fed57637)">
+     <use xlink:href="#m5b97497224" x="93.7184" y="53.886316" style="fill: #222222; stroke: #222222"/>
+    </g>
+   </g>
+   <g id="line2d_41">
+    <g clip-path="url(#p96fed57637)">
+     <use xlink:href="#m5b97497224" x="233.512085" y="199.781053" style="fill: #222222; stroke: #222222"/>
+    </g>
+   </g>
+   <g id="line2d_42">
+    <g clip-path="url(#p96fed57637)">
+     <use xlink:href="#m5b97497224" x="44.379453" y="53.886316" style="fill: #222222; stroke: #222222"/>
+    </g>
+   </g>
+   <g id="line2d_43">
+    <g clip-path="url(#p96fed57637)">
+     <use xlink:href="#m5b97497224" x="44.379453" y="199.781053" style="fill: #222222; stroke: #222222"/>
+    </g>
+   </g>
+   <g id="line2d_44">
+    <defs>
+     <path id="m42fd848ce4" d="M 0 4 
+C 1.060812 4 2.078319 3.578535 2.828427 2.828427 
+C 3.578535 2.078319 4 1.060812 4 0 
+C 4 -1.060812 3.578535 -2.078319 2.828427 -2.828427 
+C 2.078319 -3.578535 1.060812 -4 0 -4 
+C -1.060812 -4 -2.078319 -3.578535 -2.828427 -2.828427 
+C -3.578535 -2.078319 -4 -1.060812 -4 0 
+C -4 1.060812 -3.578535 2.078319 -2.828427 2.828427 
+C -2.078319 3.578535 -1.060812 4 0 4 
+z
+" style="stroke: #d64545; stroke-width: 1.6"/>
+    </defs>
+    <g clip-path="url(#p96fed57637)">
+     <use xlink:href="#m42fd848ce4" x="233.512085" y="153.094737" style="fill-opacity: 0; stroke: #d64545; stroke-width: 1.6"/>
+    </g>
+   </g>
+   <g id="patch_4">
+    <path d="M 44.379453 228.96 
+L 44.379453 7.2 
+" style="fill: none; stroke: #444444; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="patch_5">
+    <path d="M 44.379453 228.96 
+L 356.859453 228.96 
+" style="fill: none; stroke: #444444; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="text_19">
+    <text style="font-size: 7.5px; font-family: 'DejaVu Sans'; text-anchor: start" x="238.512085" y="148.094737" transform="rotate(-0 238.512085 148.094737)">(460, 260)</text>
+   </g>
+   <g id="text_20">
+    <text style="font-size: 7.5px; font-family: 'DejaVu Sans'; text-anchor: start" x="98.7184" y="48.886316" transform="rotate(-0 98.7184 48.886316)">(120, 600)</text>
+   </g>
+   <g id="text_21">
+    <text style="font-size: 7.5px; font-family: 'DejaVu Sans'; text-anchor: start" x="238.512085" y="194.781053" transform="rotate(-0 238.512085 194.781053)">(460, 100)</text>
+   </g>
+   <g id="text_22">
+    <text style="font-size: 7.5px; font-family: 'DejaVu Sans'; text-anchor: start" x="49.379453" y="48.886316" transform="rotate(-0 49.379453 48.886316)">(0, 600)</text>
+   </g>
+   <g id="text_23">
+    <text style="font-size: 7.5px; font-family: 'DejaVu Sans'; text-anchor: start" x="49.379453" y="194.781053" transform="rotate(-0 49.379453 194.781053)">(0, 100)</text>
+   </g>
+   <g id="legend_1">
+    <g id="patch_6">
+     <path d="M 230.563047 87.143828 
+L 351.959453 87.143828 
+Q 353.359453 87.143828 353.359453 85.743828 
+L 353.359453 12.1 
+Q 353.359453 10.7 351.959453 10.7 
+L 230.563047 10.7 
+Q 229.163047 10.7 229.163047 12.1 
+L 229.163047 85.743828 
+Q 229.163047 87.143828 230.563047 87.143828 
+z
+" style="fill: #ffffff; opacity: 0.95; stroke: #cccccc; stroke-linejoin: miter"/>
+    </g>
+    <g id="patch_7">
+     <path d="M 231.963047 19.098906 
+L 245.963047 19.098906 
+L 245.963047 14.198906 
+L 231.963047 14.198906 
+z
+" style="fill: #2f7fd8; opacity: 0.15; stroke: #2f7fd8; stroke-linejoin: miter"/>
+    </g>
+    <g id="text_24">
+     <text style="font-size: 7px; font-family: 'DejaVu Sans'; text-anchor: start" x="251.563047" y="19.098906" transform="rotate(-0 251.563047 19.098906)">Región factible</text>
+    </g>
+    <g id="line2d_45">
+     <path d="M 231.963047 27.149453 
+L 238.963047 27.149453 
+L 245.963047 27.149453 
+" style="fill: none; stroke: #2f7fd8; stroke-width: 1.4; stroke-linecap: square"/>
+    </g>
+    <g id="text_25">
+     <text style="font-size: 7px; font-family: 'DejaVu Sans'; text-anchor: start" x="251.563047" y="29.599453" transform="rotate(-0 251.563047 29.599453)">x₁ + x₂ ≤ 720 (presupuesto)</text>
+    </g>
+    <g id="line2d_46">
+     <path d="M 231.963047 37.65 
+L 238.963047 37.65 
+L 245.963047 37.65 
+" style="fill: none; stroke: #8a4fe0; stroke-width: 1.4; stroke-linecap: square"/>
+    </g>
+    <g id="text_26">
+     <text style="font-size: 7px; font-family: 'DejaVu Sans'; text-anchor: start" x="251.563047" y="40.1" transform="rotate(-0 251.563047 40.1)">x₁ ≤ 460 (tope Backend)</text>
+    </g>
+    <g id="line2d_47">
+     <path d="M 231.963047 48.150547 
+L 238.963047 48.150547 
+L 245.963047 48.150547 
+" style="fill: none; stroke: #e8862a; stroke-width: 1.4; stroke-linecap: square"/>
+    </g>
+    <g id="text_27">
+     <text style="font-size: 7px; font-family: 'DejaVu Sans'; text-anchor: start" x="251.563047" y="50.600547" transform="rotate(-0 251.563047 50.600547)">x₂ ≤ 600 (tope Frontend)</text>
+    </g>
+    <g id="line2d_48">
+     <path d="M 231.963047 58.931094 
+L 238.963047 58.931094 
+L 245.963047 58.931094 
+" style="fill: none; stroke: #2e9e6a; stroke-width: 1.4; stroke-linecap: square"/>
+    </g>
+    <g id="text_28">
+     <text style="font-size: 7px; font-family: 'DejaVu Sans'; text-anchor: start" x="251.563047" y="61.381094" transform="rotate(-0 251.563047 61.381094)">x₂ ≥ 100 (mínimo Frontend)</text>
+    </g>
+    <g id="line2d_49">
+     <path d="M 231.963047 69.711641 
+L 238.963047 69.711641 
+L 245.963047 69.711641 
+" style="fill: none; stroke-dasharray: 4.44,1.92; stroke-dashoffset: 0; stroke: #d64545; stroke-width: 1.2"/>
+    </g>
+    <g id="text_29">
+     <text style="font-size: 7px; font-family: 'DejaVu Sans'; text-anchor: start" x="251.563047" y="72.161641" transform="rotate(-0 251.563047 72.161641)">Z = 1.618 (recta óptima)</text>
+    </g>
+    <g id="line2d_50">
+     <path d="M 231.963047 80.212187 
+L 238.963047 80.212187 
+L 245.963047 80.212187 
+" style="fill: none; stroke-dasharray: 0.8,1.32; stroke-dashoffset: 0; stroke: #d64545; stroke-opacity: 0.7; stroke-width: 0.8"/>
+    </g>
+    <g id="text_30">
+     <text style="font-size: 7px; font-family: 'DejaVu Sans'; text-anchor: start" x="251.563047" y="82.662187" transform="rotate(-0 251.563047 82.662187)">Z = 900 (otra recta de Z)</text>
+    </g>
+   </g>
+  </g>
+ </g>
+ <defs>
+  <clipPath id="p96fed57637">
+   <rect x="44.379453" y="7.2" width="312.48" height="221.76"/>
+  </clipPath>
+ </defs>
+</svg>
+<figcaption>Figura 4. Región factible, vértices y recta óptima de Z.</figcaption></figure>
+<table class=""><thead><tr><th class="">Vértice (cruce de restricciones)</th><th class="num">x<sub>1</sub></th><th class="num">x<sub>2</sub></th><th class="num">Z</th></tr></thead><tbody><tr><td class="">Presupuesto ∩ Tope Backend</td><td class="num">460</td><td class="num">260</td><td class="num "><b>1.618</b></td></tr><tr><td class="">Presupuesto ∩ Tope Frontend</td><td class="num">120</td><td class="num">600</td><td class="num ">1.380</td></tr><tr><td class="">Tope Backend ∩ Mínimo Frontend</td><td class="num">460</td><td class="num">100</td><td class="num ">1.330</td></tr><tr><td class="">Tope Frontend ∩ x₁ = 0</td><td class="num">0</td><td class="num">600</td><td class="num ">1.080</td></tr><tr><td class="">Mínimo Frontend ∩ x₁ = 0</td><td class="num">0</td><td class="num">100</td><td class="num ">180</td></tr></tbody></table>
+<p>El óptimo es <b>x<sub>1</sub> = 460, x<sub>2</sub> = 260, Z = 1.618</b>,
+en el cruce del presupuesto con el tope de Backend: conviene darle a Backend todo lo que puede usar porque cada dólar
+rinde más allí, y lo que sobra va a Frontend. La misma vista está en la hoja "Dos equipos" del Excel.</p>
+<h2>6.3 Simplex en tabla</h2>
+<p>La restricción x<sub>2</sub> ≥ 100 haría que el origen no fuera factible. Para empezar en un punto factible se cambia de
+variable: x<sub>1</sub> = 0 + y<sub>1</sub> y x<sub>2</sub> = 100 + y<sub>2</sub> con
+y<sub>1</sub>, y<sub>2</sub> ≥ 0. Sustituyendo, todas las restricciones quedan "≤" y se agregan las holguras h<sub>1</sub>, h<sub>2</sub>, h<sub>3</sub>:</p>
+<div class="modelo">
+<p><b>Maximizar</b> Z = 2,5 y<sub>1</sub> + 1,8 y<sub>2</sub> + 180</p>
+<p class="sang">y<sub>1</sub> + y<sub>2</sub> + h<sub>1</sub> = 620 &nbsp;·&nbsp; y<sub>1</sub> + h<sub>2</sub> = 460 &nbsp;·&nbsp; y<sub>2</sub> + h<sub>3</sub> = 500</p>
+</div>
+<p>La última fila guarda z<sub>j</sub> − c<sub>j</sub>. Entra la columna más negativa, sale la fila con la menor razón
+solución / coeficiente (solo coeficientes positivos) y se pivotea. La celda con recuadro es el pivote. El valor de Z en la
+tabla no incluye la constante 180.</p>
+<div class="pasos"><div class="paso"><div class="paso-t"><span class="pn">0</span>Tabla inicial: la solución es el origen. Entra <b>y1</b> y sale <b>h2</b>.</div><table class="mat simplex"><thead><tr><th>Base</th><th class="num">y1</th><th class="num">y2</th><th class="num">h1</th><th class="num">h2</th><th class="num">h3</th><th class="num">Solución</th><th class="num">Razón</th></tr></thead><tbody><tr class=""><th>h1</th><td class="num cpiv">1</td><td class="num ">1</td><td class="num ">1</td><td class="num ">0</td><td class="num ">0</td><td class="num ">620</td><td class="num tenue">620</td></tr><tr class=""><th>h2</th><td class="num fpiv cpiv piv">1</td><td class="num fpiv">0</td><td class="num fpiv">0</td><td class="num fpiv">1</td><td class="num fpiv">0</td><td class="num fpiv">460</td><td class="num tenue">460</td></tr><tr class=""><th>h3</th><td class="num cpiv">0</td><td class="num ">1</td><td class="num ">0</td><td class="num ">0</td><td class="num ">1</td><td class="num ">500</td><td class="num tenue">—</td></tr><tr class="zfila"><th>Z</th><td class="num cpiv">-2,5</td><td class="num ">-1,8</td><td class="num ">0</td><td class="num ">0</td><td class="num ">0</td><td class="num ">0</td><td class="num tenue">—</td></tr></tbody></table></div><div class="paso"><div class="paso-t"><span class="pn">1</span>Entra y1: Z = 1150. Entra <b>y2</b> y sale <b>h1</b>.</div><table class="mat simplex"><thead><tr><th>Base</th><th class="num">y1</th><th class="num">y2</th><th class="num">h1</th><th class="num">h2</th><th class="num">h3</th><th class="num">Solución</th><th class="num">Razón</th></tr></thead><tbody><tr class=""><th>h1</th><td class="num fpiv">0</td><td class="num fpiv cpiv piv">1</td><td class="num fpiv">1</td><td class="num fpiv">-1</td><td class="num fpiv">0</td><td class="num fpiv">160</td><td class="num tenue">160</td></tr><tr class=""><th>y1</th><td class="num ">1</td><td class="num cpiv">0</td><td class="num ">0</td><td class="num ">1</td><td class="num ">0</td><td class="num ">460</td><td class="num tenue">—</td></tr><tr class=""><th>h3</th><td class="num ">0</td><td class="num cpiv">1</td><td class="num ">0</td><td class="num ">0</td><td class="num ">1</td><td class="num ">500</td><td class="num tenue">500</td></tr><tr class="zfila"><th>Z</th><td class="num ">0</td><td class="num cpiv">-1,8</td><td class="num ">0</td><td class="num ">2,5</td><td class="num ">0</td><td class="num ">1.150</td><td class="num tenue">—</td></tr></tbody></table></div><div class="paso"><div class="paso-t"><span class="pn">2</span>Entra y2: Z = 1438. Ningún z_j − c_j es negativo: es la solución óptima.</div><table class="mat simplex"><thead><tr><th>Base</th><th class="num">y1</th><th class="num">y2</th><th class="num">h1</th><th class="num">h2</th><th class="num">h3</th><th class="num">Solución</th></tr></thead><tbody><tr class=""><th>y2</th><td class="num ">0</td><td class="num ">1</td><td class="num ">1</td><td class="num ">-1</td><td class="num ">0</td><td class="num ">160</td></tr><tr class=""><th>y1</th><td class="num ">1</td><td class="num ">0</td><td class="num ">0</td><td class="num ">1</td><td class="num ">0</td><td class="num ">460</td></tr><tr class=""><th>h3</th><td class="num ">0</td><td class="num ">0</td><td class="num ">-1</td><td class="num ">1</td><td class="num ">1</td><td class="num ">340</td></tr><tr class="zfila"><th>Z</th><td class="num ">0</td><td class="num ">0</td><td class="num ">1,8</td><td class="num ">0,7</td><td class="num ">0</td><td class="num ">1.438</td></tr></tbody></table></div></div>
+<p>Termina en y<sub>1</sub> = 460 y y<sub>2</sub> = 160, es decir x<sub>1</sub> = <b>460</b>, x<sub>2</sub> = 100 + 160 =
+<b>260</b> y Z = 1.438 + 180 = <b>1.618</b>: el mismo vértice del método gráfico, al que Simplex llega en dos
+pivoteos pasando por el vértice (460, 100). En la tabla final, el z<sub>j</sub> − c<sub>j</sub> de h<sub>1</sub> (1,8) es el precio
+sombra del presupuesto en esta vista y el de h<sub>2</sub> (0,7) el del tope de Backend.</p>
+
+<h1 id="s7">7. Modelo 2: con qué fuente se paga</h1>
+<h2>7.1 Planteamiento</h2>
+<p>El uso óptimo del Modelo 1 es la <b>demanda</b> de cada equipo: Backend 1.010 USD (360 + 250 + 150 + 250)
+y Frontend 450 USD (250 + 200). Las fuentes de pago son la <b>oferta</b>: la API a precio de lista, la
+API en batch y las bolsas de los asientos de Backend (740 USD: 360 de Ana, 150 de Luis, 150 de Sara y
+80 de Pedro). La oferta total (3.990) es mayor que la demanda (1.460), así
+que se agrega un destino <b>ficticio</b> con demanda 2.530 y costo 0. Las rutas que no se pueden usar
+(batch y bolsas de Backend hacia Frontend) llevan un costo M muy grande (M = 99).</p>
+<div class="modelo">
+<p><b>Variables:</b> x<sub>ij</sub> = dólares de uso del equipo <i>j</i> que se pagan con la fuente <i>i</i>.</p>
+<p><b>Minimizar</b> Z = Σ<sub>i</sub> Σ<sub>j</sub> c<sub>ij</sub> x<sub>ij</sub> &nbsp; <b>s.a.</b>
+Σ<sub>j</sub> x<sub>ij</sub> = oferta<sub>i</sub> &nbsp;·&nbsp; Σ<sub>i</sub> x<sub>ij</sub> = demanda<sub>j</sub> &nbsp;·&nbsp; x<sub>ij</sub> ≥ 0</p>
+</div>
+<table class="mat trans"><thead><tr><th>Fuente \ destino</th><th class="num">Backend</th><th class="num">Frontend</th><th class="num">Ficticio</th><th class="num">Oferta</th></tr></thead><tbody><tr><th>API pago por uso</th><td class="tcel "><span class="costo">1</span><span class="q"></span></td><td class="tcel "><span class="costo">1</span><span class="q"></span></td><td class="tcel "><span class="costo">0</span><span class="q"></span></td><td class='num'>3.000</td></tr><tr><th>API en batch</th><td class="tcel "><span class="costo">0,5</span><span class="q"></span></td><td class="tcel "><span class="costo">M</span><span class="q"></span></td><td class="tcel "><span class="costo">0</span><span class="q"></span></td><td class='num'>250</td></tr><tr><th>Bolsas de asientos (Backend)</th><td class="tcel "><span class="costo">0</span><span class="q"></span></td><td class="tcel "><span class="costo">M</span><span class="q"></span></td><td class="tcel "><span class="costo">0</span><span class="q"></span></td><td class='num'>740</td></tr><tr class='dem'><th>Demanda</th><td class='num'>1.010</td><td class='num'>450</td><td class='num'>2.530</td><td></td></tr></tbody></table>
+<p class="nota">En la esquina de cada casilla está el costo por dólar de uso. Las fuentes se ordenan de la más cara a la
+más barata, así la esquina noroeste empieza lejos del óptimo y MODI tiene trabajo que hacer.</p>
+
+<h2>7.2 Soluciones iniciales</h2>
+<h3>Esquina noroeste — costo 1.460 USD</h3>
+<ol class='pasos-t'><li>Se asigna <b>1.010</b> a API pago por uso → Backend (costo 1).</li><li>Se asigna <b>450</b> a API pago por uso → Frontend (costo 1).</li><li>Se asigna <b>1.540</b> a API pago por uso → Ficticio (costo 0).</li><li>Se asigna <b>250</b> a API en batch → Ficticio (costo 0).</li><li>Se asigna <b>740</b> a Bolsas de asientos (Backend) → Ficticio (costo 0).</li></ol>
+<table class="mat trans"><thead><tr><th>Fuente \ destino</th><th class="num">Backend</th><th class="num">Frontend</th><th class="num">Ficticio</th><th class="num">Oferta</th></tr></thead><tbody><tr><th>API pago por uso</th><td class="tcel basica"><span class="costo">1</span><span class="q"><b>1.010</b></span></td><td class="tcel basica"><span class="costo">1</span><span class="q"><b>450</b></span></td><td class="tcel basica"><span class="costo">0</span><span class="q"><b>1.540</b></span></td><td class='num'>3.000</td></tr><tr><th>API en batch</th><td class="tcel "><span class="costo">0,5</span><span class="q"></span></td><td class="tcel "><span class="costo">M</span><span class="q"></span></td><td class="tcel basica"><span class="costo">0</span><span class="q"><b>250</b></span></td><td class='num'>250</td></tr><tr><th>Bolsas de asientos (Backend)</th><td class="tcel "><span class="costo">0</span><span class="q"></span></td><td class="tcel "><span class="costo">M</span><span class="q"></span></td><td class="tcel basica"><span class="costo">0</span><span class="q"><b>740</b></span></td><td class='num'>740</td></tr><tr class='dem'><th>Demanda</th><td class='num'>1.010</td><td class='num'>450</td><td class='num'>2.530</td><td></td></tr></tbody></table>
+<h3>Costo mínimo — costo 595 USD</h3>
+<p>Se asigna siempre en la casilla más barata que queda; en empate, la que permite asignar más.</p>
+<ol class='pasos-t'><li>Se asigna <b>2.530</b> a API pago por uso → Ficticio (costo 0).</li><li>Se asigna <b>740</b> a Bolsas de asientos (Backend) → Backend (costo 0).</li><li>Se asigna <b>250</b> a API en batch → Backend (costo 0,5).</li><li>Se asigna <b>450</b> a API pago por uso → Frontend (costo 1).</li><li>Se asigna <b>20</b> a API pago por uso → Backend (costo 1).</li></ol>
+<h3>Vogel — costo 595 USD</h3>
+<p>En cada paso se calcula la penalización de cada fila y columna (diferencia entre sus dos costos más bajos), se toma la
+mayor y se asigna en su casilla más barata.</p>
+<ol class='pasos-t'><li><span class="tenue">Penalizaciones: filas [API pago por uso 1, API en batch 0,5, Bolsas de asientos 0]; columnas [Backend 0,5, Frontend M, Ficticio 0].</span> Se asigna <b>450</b> a API pago por uso → Frontend (costo 1).</li><li><span class="tenue">Penalizaciones: filas [API pago por uso 1, API en batch 0,5, Bolsas de asientos 0]; columnas [Backend 0,5, Ficticio 0].</span> Se asigna <b>2.530</b> a API pago por uso → Ficticio (costo 0).</li><li><span class="tenue">Penalizaciones: filas [API pago por uso 1, API en batch 0,5, Bolsas de asientos 0]; columnas [Backend 0,5].</span> Se asigna <b>20</b> a API pago por uso → Backend (costo 1).</li><li><span class="tenue">Penalizaciones: filas [API en batch 0,5, Bolsas de asientos 0]; columnas [Backend 0,5].</span> Se asigna <b>250</b> a API en batch → Backend (costo 0,5).</li><li><span class="tenue">Penalizaciones: filas [Bolsas de asientos 0]; columnas [Backend 0].</span> Se asigna <b>740</b> a Bolsas de asientos (Backend) → Backend (costo 0).</li></ol>
+<table class="mat trans"><thead><tr><th>Fuente \ destino</th><th class="num">Backend</th><th class="num">Frontend</th><th class="num">Ficticio</th><th class="num">Oferta</th></tr></thead><tbody><tr><th>API pago por uso</th><td class="tcel basica"><span class="costo">1</span><span class="q"><b>20</b></span></td><td class="tcel basica"><span class="costo">1</span><span class="q"><b>450</b></span></td><td class="tcel basica"><span class="costo">0</span><span class="q"><b>2.530</b></span></td><td class='num'>3.000</td></tr><tr><th>API en batch</th><td class="tcel basica"><span class="costo">0,5</span><span class="q"><b>250</b></span></td><td class="tcel "><span class="costo">M</span><span class="q"></span></td><td class="tcel "><span class="costo">0</span><span class="q"></span></td><td class='num'>250</td></tr><tr><th>Bolsas de asientos (Backend)</th><td class="tcel basica"><span class="costo">0</span><span class="q"><b>740</b></span></td><td class="tcel "><span class="costo">M</span><span class="q"></span></td><td class="tcel "><span class="costo">0</span><span class="q"></span></td><td class='num'>740</td></tr><tr class='dem'><th>Demanda</th><td class='num'>1.010</td><td class='num'>450</td><td class='num'>2.530</td><td></td></tr></tbody></table>
+<p>Costo mínimo y Vogel llegan a la misma tabla de 595 USD. La esquina noroeste no mira los costos y
+queda en 1.460 USD.</p>
+
+<h2>7.3 Prueba de optimalidad MODI</h2>
+<p>Se parte de la esquina noroeste. En las tablas, las casillas básicas muestran su asignación en negrilla y las vacías su
+costo reducido; el recuadro marca la casilla que entra y los signos + / − el ciclo.</p>
+<div class="pasos"><div class="paso"><div class="paso-t"><span class="pn">0</span>Costo 1.460 USD. Se calculan u<sub>i</sub> y v<sub>j</sub> con c<sub>ij</sub> = u<sub>i</sub> + v<sub>j</sub> en las casillas básicas (u<sub>1</sub> = 0) y en las vacías el costo reducido c<sub>ij</sub> − u<sub>i</sub> − v<sub>j</sub>. El más negativo es <b>Bolsas de asientos (Backend) → Backend</b> (-1), que entra. Ciclo: (Bolsas de asientos, Backend) + → (API pago por uso, Backend) − → (API pago por uso, Ficticio) + → (Bolsas de asientos, Ficticio) −. θ = <b>740</b> (el menor valor en las casillas −); sale Bolsas de asientos (Backend) → Ficticio.</div><table class="mat trans"><thead><tr><th>Fuente \ destino</th><th class="num">Backend</th><th class="num">Frontend</th><th class="num">Ficticio</th><th class="num">Oferta</th><th class="num">u<sub>i</sub></th></tr></thead><tbody><tr><th>API pago por uso</th><td class="tcel basica"><span class="costo">1</span><span class=signo>−</span><span class="q"><b>1.010</b></span></td><td class="tcel basica"><span class="costo">1</span><span class="q"><b>450</b></span></td><td class="tcel basica"><span class="costo">0</span><span class=signo>+</span><span class="q"><b>1.540</b></span></td><td class='num'>3.000</td><td class='num'>0</td></tr><tr><th>API en batch</th><td class="tcel "><span class="costo">0,5</span><span class="q"><span class="redneg">-0,5</span></span></td><td class="tcel "><span class="costo">M</span><span class="q"><span class="red">M</span></span></td><td class="tcel basica"><span class="costo">0</span><span class="q"><b>250</b></span></td><td class='num'>250</td><td class='num'>0</td></tr><tr><th>Bolsas de asientos (Backend)</th><td class="tcel entra"><span class="costo">0</span><span class=signo>+</span><span class="q"><span class="redneg">-1</span></span></td><td class="tcel "><span class="costo">M</span><span class="q"><span class="red">M</span></span></td><td class="tcel basica"><span class="costo">0</span><span class=signo>−</span><span class="q"><b>740</b></span></td><td class='num'>740</td><td class='num'>0</td></tr><tr class='dem'><th>Demanda</th><td class='num'>1.010</td><td class='num'>450</td><td class='num'>2.530</td><td></td><td></td></tr><tr class='dem'><th>v<sub>j</sub></th><td class='num'>1</td><td class='num'>1</td><td class='num'>0</td><td></td><td></td></tr></tbody></table></div><div class="paso"><div class="paso-t"><span class="pn">1</span>Costo 720 USD. Se calculan u<sub>i</sub> y v<sub>j</sub> con c<sub>ij</sub> = u<sub>i</sub> + v<sub>j</sub> en las casillas básicas (u<sub>1</sub> = 0) y en las vacías el costo reducido c<sub>ij</sub> − u<sub>i</sub> − v<sub>j</sub>. El más negativo es <b>API en batch → Backend</b> (-0,5), que entra. Ciclo: (API en batch, Backend) + → (API pago por uso, Backend) − → (API pago por uso, Ficticio) + → (API en batch, Ficticio) −. θ = <b>250</b> (el menor valor en las casillas −); sale API en batch → Ficticio.</div><table class="mat trans"><thead><tr><th>Fuente \ destino</th><th class="num">Backend</th><th class="num">Frontend</th><th class="num">Ficticio</th><th class="num">Oferta</th><th class="num">u<sub>i</sub></th></tr></thead><tbody><tr><th>API pago por uso</th><td class="tcel basica"><span class="costo">1</span><span class=signo>−</span><span class="q"><b>270</b></span></td><td class="tcel basica"><span class="costo">1</span><span class="q"><b>450</b></span></td><td class="tcel basica"><span class="costo">0</span><span class=signo>+</span><span class="q"><b>2.280</b></span></td><td class='num'>3.000</td><td class='num'>0</td></tr><tr><th>API en batch</th><td class="tcel entra"><span class="costo">0,5</span><span class=signo>+</span><span class="q"><span class="redneg">-0,5</span></span></td><td class="tcel "><span class="costo">M</span><span class="q"><span class="red">M</span></span></td><td class="tcel basica"><span class="costo">0</span><span class=signo>−</span><span class="q"><b>250</b></span></td><td class='num'>250</td><td class='num'>0</td></tr><tr><th>Bolsas de asientos (Backend)</th><td class="tcel basica"><span class="costo">0</span><span class="q"><b>740</b></span></td><td class="tcel "><span class="costo">M</span><span class="q"><span class="red">M</span></span></td><td class="tcel "><span class="costo">0</span><span class="q"><span class="red">1</span></span></td><td class='num'>740</td><td class='num'>-1</td></tr><tr class='dem'><th>Demanda</th><td class='num'>1.010</td><td class='num'>450</td><td class='num'>2.530</td><td></td><td></td></tr><tr class='dem'><th>v<sub>j</sub></th><td class='num'>1</td><td class='num'>1</td><td class='num'>0</td><td></td><td></td></tr></tbody></table></div><div class="paso"><div class="paso-t"><span class="pn">2</span>Costo 595 USD. Ningún costo reducido es negativo: <b>la solución es óptima</b>.</div><table class="mat trans"><thead><tr><th>Fuente \ destino</th><th class="num">Backend</th><th class="num">Frontend</th><th class="num">Ficticio</th><th class="num">Oferta</th><th class="num">u<sub>i</sub></th></tr></thead><tbody><tr><th>API pago por uso</th><td class="tcel basica"><span class="costo">1</span><span class="q"><b>20</b></span></td><td class="tcel basica"><span class="costo">1</span><span class="q"><b>450</b></span></td><td class="tcel basica"><span class="costo">0</span><span class="q"><b>2.530</b></span></td><td class='num'>3.000</td><td class='num'>0</td></tr><tr><th>API en batch</th><td class="tcel basica"><span class="costo">0,5</span><span class="q"><b>250</b></span></td><td class="tcel "><span class="costo">M</span><span class="q"><span class="red">M</span></span></td><td class="tcel "><span class="costo">0</span><span class="q"><span class="red">0,5</span></span></td><td class='num'>250</td><td class='num'>-0,5</td></tr><tr><th>Bolsas de asientos (Backend)</th><td class="tcel basica"><span class="costo">0</span><span class="q"><b>740</b></span></td><td class="tcel "><span class="costo">M</span><span class="q"><span class="red">M</span></span></td><td class="tcel "><span class="costo">0</span><span class="q"><span class="red">1</span></span></td><td class='num'>740</td><td class='num'>-1</td></tr><tr class='dem'><th>Demanda</th><td class='num'>1.010</td><td class='num'>450</td><td class='num'>2.530</td><td></td><td></td></tr><tr class='dem'><th>v<sub>j</sub></th><td class='num'>1</td><td class='num'>1</td><td class='num'>0</td><td></td><td></td></tr></tbody></table></div></div>
+<p>MODI necesita 2 iteraciones desde la esquina noroeste (1.460 → 720 → 595). Partiendo de Vogel no necesita
+ninguna: todos sus costos reducidos ya son no negativos. La solución óptima paga el uso así: las bolsas cubren
+740 USD de Backend, el batch 250 USD y la API 20 USD de Backend y 450 USD de Frontend, por <b>595 USD</b>.</p>
+<h2>7.4 Lo que vuelve al Modelo 1</h2>
+<p>Los potenciales de MODI dicen cuánto cuesta atender un dólar más de cada equipo: v<sub>j</sub> − v<sub>ficticio</sub>.
+Con la tabla óptima, v = (1, 1, 0), así que un dólar más cuesta
+1 USD en Backend y 1 USD en Frontend: el siguiente dólar se
+pagaría por API a precio de lista. Es justo el costo c<sub>d</sub> = 1 que supuso el Modelo 1, así que el ciclo
+<b>converge en la primera vuelta</b>. Si una empresa tuviera más batch disponible, este costo bajaría a 0,5, el Modelo 1
+se volvería a resolver con ese valor y el ciclo daría otra vuelta.</p>
+
+<h1 id="s8">8. Análisis de sensibilidad: los indicadores</h1>
+<h2>8.1 Precios sombra</h2>
+<p>El precio sombra de una restricción dice cuánto cambia el óptimo si su lado derecho sube una unidad. En el Modelo 1:</p>
+<ul>
+<li><b>Presupuesto: 0,125.</b> Un dólar más de presupuesto extra deja 0,125 USD más de valor
+neto. Ese dólar iría a Diego, que está a mitad de su tramo 2: rinde 1,125 y cuesta 1, y
+1,125 − 1 = 0,125. Todavía conviene gastar, pero cada vez rinde menos.</li>
+<li><b>Tope de Ana: 0,6.</b> Si a Ana le subieran el tope un dólar, lo usaría en su tramo 3 (0,6) y
+cabría en su bolsa, sin costo. Es la única persona a la que su tope la limita.</li>
+<li><b>Bolsas:</b> un dólar más de bolsa vale el rendimiento del tramo en que está la persona, porque le ahorra un dólar de
+gasto extra. Esto le dice a la empresa qué plan vale la pena mejorar.</li>
+</ul>
+<table class=""><thead><tr><th class="">Persona</th><th class="num">Uso óptimo</th><th class="num">Precio sombra del tope</th><th class="num">Precio sombra de la bolsa</th></tr></thead><tbody><tr><td class="">Ana</td><td class="num">360</td><td class="num">0,6</td><td class="num">0</td></tr><tr><td class="">Luis</td><td class="num">250</td><td class="num">0</td><td class="num">1,125</td></tr><tr><td class="">Sara</td><td class="num">150</td><td class="num">0</td><td class="num">1,062</td></tr><tr><td class="">Pedro</td><td class="num">250</td><td class="num">0</td><td class="num">1,125</td></tr><tr><td class="">Carla</td><td class="num">250</td><td class="num">0</td><td class="num">1,125</td></tr><tr><td class="">Diego</td><td class="num">200</td><td class="num">0</td><td class="num">1,125</td></tr></tbody></table>
+<h2>8.2 Rango del presupuesto</h2>
+<p>Mientras el presupuesto extra esté entre <b>620 USD y 769 USD</b>, el precio sombra se mantiene en
+0,125 y la base óptima no cambia (el rango se halló resolviendo el modelo para cada valor de B, en pasos de
+1 USD). Por debajo de 620 USD el dólar marginal sale de un tramo que rinde más y el precio sombra sube; por encima
+de 769 USD baja. La figura muestra el valor neto como función de B: es cóncava y lineal por tramos, como todo
+óptimo de un problema de maximización cuando cambia un lado derecho.</p>
+<figure><svg xmlns:xlink="http://www.w3.org/1999/xlink" width="403.265703pt" height="198.632703pt" viewBox="0 0 403.265703 198.632703" xmlns="http://www.w3.org/2000/svg" version="1.1">
+ <metadata>
+  <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+   <cc:Work>
+    <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+    <dc:date>2026-11-25T14:39:41.668560</dc:date>
+    <dc:format>image/svg+xml</dc:format>
+    <dc:creator>
+     <cc:Agent>
+      <dc:title>Matplotlib v3.11.2, https://matplotlib.org/</dc:title>
+     </cc:Agent>
+    </dc:creator>
+   </cc:Work>
+  </rdf:RDF>
+ </metadata>
+ <defs>
+  <style type="text/css">*{stroke-linejoin: round; stroke-linecap: butt}</style>
+ </defs>
+ <g id="figure_1">
+  <g id="patch_1">
+   <path d="M 0 198.632703 
+L 403.265703 198.632703 
+L 403.265703 0 
+L 0 0 
+z
+" style="fill: #ffffff"/>
+  </g>
+  <g id="axes_1">
+   <g id="patch_2">
+    <path d="M 50.105703 162.432 
+L 396.065703 162.432 
+L 396.065703 7.2 
+L 50.105703 7.2 
+z
+" style="fill: #ffffff"/>
+   </g>
+   <g id="matplotlib.axis_1">
+    <g id="xtick_1">
+     <g id="line2d_1">
+      <path d="M 92.040249 162.432 
+L 92.040249 7.2 
+" clip-path="url(#p246f12b09a)" style="fill: none; stroke: #e6e6e6; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_2">
+      <defs>
+       <path id="m3cc00489da" d="M 0 0 
+L 0 3.5 
+" style="stroke: #333333; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#m3cc00489da" x="92.040249" y="162.432" style="fill: #333333; stroke: #333333; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_1">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #333333" x="92.040249" y="176.269891" transform="rotate(-0 92.040249 176.269891)">200</text>
+     </g>
+    </g>
+    <g id="xtick_2">
+     <g id="line2d_3">
+      <path d="M 144.45843 162.432 
+L 144.45843 7.2 
+" clip-path="url(#p246f12b09a)" style="fill: none; stroke: #e6e6e6; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_4">
+      <g>
+       <use xlink:href="#m3cc00489da" x="144.45843" y="162.432" style="fill: #333333; stroke: #333333; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_2">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #333333" x="144.45843" y="176.269891" transform="rotate(-0 144.45843 176.269891)">400</text>
+     </g>
+    </g>
+    <g id="xtick_3">
+     <g id="line2d_5">
+      <path d="M 196.876612 162.432 
+L 196.876612 7.2 
+" clip-path="url(#p246f12b09a)" style="fill: none; stroke: #e6e6e6; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_6">
+      <g>
+       <use xlink:href="#m3cc00489da" x="196.876612" y="162.432" style="fill: #333333; stroke: #333333; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_3">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #333333" x="196.876612" y="176.269891" transform="rotate(-0 196.876612 176.269891)">600</text>
+     </g>
+    </g>
+    <g id="xtick_4">
+     <g id="line2d_7">
+      <path d="M 249.294794 162.432 
+L 249.294794 7.2 
+" clip-path="url(#p246f12b09a)" style="fill: none; stroke: #e6e6e6; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_8">
+      <g>
+       <use xlink:href="#m3cc00489da" x="249.294794" y="162.432" style="fill: #333333; stroke: #333333; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_4">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #333333" x="249.294794" y="176.269891" transform="rotate(-0 249.294794 176.269891)">800</text>
+     </g>
+    </g>
+    <g id="xtick_5">
+     <g id="line2d_9">
+      <path d="M 301.712976 162.432 
+L 301.712976 7.2 
+" clip-path="url(#p246f12b09a)" style="fill: none; stroke: #e6e6e6; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_10">
+      <g>
+       <use xlink:href="#m3cc00489da" x="301.712976" y="162.432" style="fill: #333333; stroke: #333333; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_5">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #333333" x="301.712976" y="176.269891" transform="rotate(-0 301.712976 176.269891)">1000</text>
+     </g>
+    </g>
+    <g id="xtick_6">
+     <g id="line2d_11">
+      <path d="M 354.131158 162.432 
+L 354.131158 7.2 
+" clip-path="url(#p246f12b09a)" style="fill: none; stroke: #e6e6e6; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_12">
+      <g>
+       <use xlink:href="#m3cc00489da" x="354.131158" y="162.432" style="fill: #333333; stroke: #333333; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_6">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #333333" x="354.131158" y="176.269891" transform="rotate(-0 354.131158 176.269891)">1200</text>
+     </g>
+    </g>
+    <g id="text_7">
+     <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #222222" x="223.085703" y="189.270594" transform="rotate(-0 223.085703 189.270594)">Presupuesto de gasto extra B (USD)</text>
+    </g>
+   </g>
+   <g id="matplotlib.axis_2">
+    <g id="ytick_1">
+     <g id="line2d_13">
+      <path d="M 50.105703 159.504962 
+L 396.065703 159.504962 
+" clip-path="url(#p246f12b09a)" style="fill: none; stroke: #e6e6e6; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_14">
+      <defs>
+       <path id="ma55d589165" d="M 0 0 
+L -3.5 0 
+" style="stroke: #333333; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#ma55d589165" x="50.105703" y="159.504962" style="fill: #333333; stroke: #333333; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_8">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: end; fill: #333333" x="43.105703" y="162.923907" transform="rotate(-0 43.105703 162.923907)">1500</text>
+     </g>
+    </g>
+    <g id="ytick_2">
+     <g id="line2d_15">
+      <path d="M 50.105703 136.880513 
+L 396.065703 136.880513 
+" clip-path="url(#p246f12b09a)" style="fill: none; stroke: #e6e6e6; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_16">
+      <g>
+       <use xlink:href="#ma55d589165" x="50.105703" y="136.880513" style="fill: #333333; stroke: #333333; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_9">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: end; fill: #333333" x="43.105703" y="140.299458" transform="rotate(-0 43.105703 140.299458)">1550</text>
+     </g>
+    </g>
+    <g id="ytick_3">
+     <g id="line2d_17">
+      <path d="M 50.105703 114.256064 
+L 396.065703 114.256064 
+" clip-path="url(#p246f12b09a)" style="fill: none; stroke: #e6e6e6; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_18">
+      <g>
+       <use xlink:href="#ma55d589165" x="50.105703" y="114.256064" style="fill: #333333; stroke: #333333; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_10">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: end; fill: #333333" x="43.105703" y="117.675009" transform="rotate(-0 43.105703 117.675009)">1600</text>
+     </g>
+    </g>
+    <g id="ytick_4">
+     <g id="line2d_19">
+      <path d="M 50.105703 91.631615 
+L 396.065703 91.631615 
+" clip-path="url(#p246f12b09a)" style="fill: none; stroke: #e6e6e6; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_20">
+      <g>
+       <use xlink:href="#ma55d589165" x="50.105703" y="91.631615" style="fill: #333333; stroke: #333333; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_11">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: end; fill: #333333" x="43.105703" y="95.050561" transform="rotate(-0 43.105703 95.050561)">1650</text>
+     </g>
+    </g>
+    <g id="ytick_5">
+     <g id="line2d_21">
+      <path d="M 50.105703 69.007166 
+L 396.065703 69.007166 
+" clip-path="url(#p246f12b09a)" style="fill: none; stroke: #e6e6e6; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_22">
+      <g>
+       <use xlink:href="#ma55d589165" x="50.105703" y="69.007166" style="fill: #333333; stroke: #333333; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_12">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: end; fill: #333333" x="43.105703" y="72.426112" transform="rotate(-0 43.105703 72.426112)">1700</text>
+     </g>
+    </g>
+    <g id="ytick_6">
+     <g id="line2d_23">
+      <path d="M 50.105703 46.382717 
+L 396.065703 46.382717 
+" clip-path="url(#p246f12b09a)" style="fill: none; stroke: #e6e6e6; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_24">
+      <g>
+       <use xlink:href="#ma55d589165" x="50.105703" y="46.382717" style="fill: #333333; stroke: #333333; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_13">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: end; fill: #333333" x="43.105703" y="49.801663" transform="rotate(-0 43.105703 49.801663)">1750</text>
+     </g>
+    </g>
+    <g id="ytick_7">
+     <g id="line2d_25">
+      <path d="M 50.105703 23.758269 
+L 396.065703 23.758269 
+" clip-path="url(#p246f12b09a)" style="fill: none; stroke: #e6e6e6; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_26">
+      <g>
+       <use xlink:href="#ma55d589165" x="50.105703" y="23.758269" style="fill: #333333; stroke: #333333; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_14">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: end; fill: #333333" x="43.105703" y="27.177214" transform="rotate(-0 43.105703 27.177214)">1800</text>
+     </g>
+    </g>
+    <g id="text_15">
+     <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #222222" x="14.038594" y="84.816" transform="rotate(-90 14.038594 84.816)">Valor neto (USD)</text>
+    </g>
+   </g>
+   <g id="patch_3">
+    <path d="M 202.11843 162.432 
+L 241.169976 162.432 
+L 241.169976 7.2 
+L 202.11843 7.2 
+z
+" clip-path="url(#p246f12b09a)" style="fill: #2f7fd8; opacity: 0.12; stroke: #2f7fd8; stroke-linejoin: miter"/>
+   </g>
+   <g id="line2d_27">
+    <path d="M 65.831158 155.376 
+L 68.452067 147.457443 
+L 71.072976 139.538886 
+L 73.693885 131.620329 
+L 76.314794 123.701772 
+L 78.935703 115.783214 
+L 81.556612 109.561491 
+L 84.177521 103.339768 
+L 86.79843 97.683655 
+L 89.419339 92.027543 
+L 92.040249 86.371431 
+L 94.661158 80.715319 
+L 97.282067 75.059206 
+L 99.902976 73.362373 
+L 102.523885 71.665539 
+L 105.144794 69.968705 
+L 107.765703 68.271872 
+L 110.386612 66.575038 
+L 113.007521 64.878204 
+L 115.62843 63.181371 
+L 118.249339 61.484537 
+L 120.870249 59.787703 
+L 123.491158 58.09087 
+L 126.112067 56.394036 
+L 128.732976 54.697202 
+L 131.353885 53.000369 
+L 133.974794 51.303535 
+L 136.595703 49.606701 
+L 139.216612 48.475479 
+L 141.837521 47.344257 
+L 144.45843 46.213034 
+L 147.079339 45.081812 
+L 149.700249 43.950589 
+L 152.321158 42.819367 
+L 154.942067 41.688144 
+L 157.562976 40.556922 
+L 160.183885 39.425699 
+L 162.804794 38.294477 
+L 165.425703 37.44606 
+L 168.046612 36.597643 
+L 170.667521 35.749226 
+L 173.28843 34.90081 
+L 175.909339 34.052393 
+L 178.530249 33.203976 
+L 181.151158 32.355559 
+L 183.772067 31.507142 
+L 186.392976 30.658725 
+L 189.013885 29.810309 
+L 191.634794 28.961892 
+L 194.255703 28.113475 
+L 196.876612 27.265058 
+L 199.497521 26.416641 
+L 202.11843 25.568224 
+L 204.739339 25.002613 
+L 207.360249 24.437002 
+L 209.981158 23.871391 
+L 212.602067 23.30578 
+L 215.222976 22.740168 
+L 217.843885 22.174557 
+L 220.464794 21.608946 
+L 223.085703 21.043335 
+L 225.706612 20.477723 
+L 228.327521 19.912112 
+L 230.94843 19.346501 
+L 233.569339 18.78089 
+L 236.190249 18.215279 
+L 238.811158 17.649667 
+L 241.432067 17.084056 
+L 244.052976 16.801251 
+L 246.673885 16.518445 
+L 249.294794 16.235639 
+L 251.915703 15.952834 
+L 254.536612 15.670028 
+L 257.157521 15.387222 
+L 259.77843 15.104417 
+L 262.399339 14.821611 
+L 265.020249 14.538806 
+L 267.641158 14.256 
+L 270.262067 14.256 
+L 272.882976 14.256 
+L 275.503885 14.256 
+L 278.124794 14.256 
+L 280.745703 14.256 
+L 283.366612 14.256 
+L 285.987521 14.256 
+L 288.60843 14.256 
+L 291.229339 14.256 
+L 293.850249 14.256 
+L 296.471158 14.256 
+L 299.092067 14.256 
+L 301.712976 14.256 
+L 304.333885 14.256 
+L 306.954794 14.256 
+L 309.575703 14.256 
+L 312.196612 14.256 
+L 314.817521 14.256 
+L 317.43843 14.256 
+L 320.059339 14.256 
+L 322.680249 14.256 
+L 325.301158 14.256 
+L 327.922067 14.256 
+L 330.542976 14.256 
+L 333.163885 14.256 
+L 335.784794 14.256 
+L 338.405703 14.256 
+L 341.026612 14.256 
+L 343.647521 14.256 
+L 346.26843 14.256 
+L 348.889339 14.256 
+L 351.510249 14.256 
+L 354.131158 14.256 
+L 356.752067 14.256 
+L 359.372976 14.256 
+L 361.993885 14.256 
+L 364.614794 14.256 
+L 367.235703 14.256 
+L 369.856612 14.256 
+L 372.477521 14.256 
+L 375.09843 14.256 
+L 377.719339 14.256 
+L 380.340249 14.256 
+" clip-path="url(#p246f12b09a)" style="fill: none; stroke: #8a4fe0; stroke-width: 1.8; stroke-linecap: square"/>
+   </g>
+   <g id="line2d_28">
+    <defs>
+     <path id="mce432bef14" d="M 0 3 
+C 0.795609 3 1.55874 2.683901 2.12132 2.12132 
+C 2.683901 1.55874 3 0.795609 3 0 
+C 3 -0.795609 2.683901 -1.55874 2.12132 -2.12132 
+C 1.55874 -2.683901 0.795609 -3 0 -3 
+C -0.795609 -3 -1.55874 -2.683901 -2.12132 -2.12132 
+C -2.683901 -1.55874 -3 -0.795609 -3 0 
+C -3 0.795609 -2.683901 1.55874 -2.12132 2.12132 
+C -1.55874 2.683901 -0.795609 3 0 3 
+z
+" style="stroke: #d64545"/>
+    </defs>
+    <g clip-path="url(#p246f12b09a)">
+     <use xlink:href="#mce432bef14" x="228.327521" y="19.912112" style="fill: #d64545; stroke: #d64545"/>
+    </g>
+   </g>
+   <g id="line2d_29">
+    <defs>
+     <path id="mdfccdd7a6f" d="M 0 3 
+C 0.795609 3 1.55874 2.683901 2.12132 2.12132 
+C 2.683901 1.55874 3 0.795609 3 0 
+C 3 -0.795609 2.683901 -1.55874 2.12132 -2.12132 
+C 1.55874 -2.683901 0.795609 -3 0 -3 
+C -0.795609 -3 -1.55874 -2.683901 -2.12132 -2.12132 
+C -2.683901 -1.55874 -3 -0.795609 -3 0 
+C -3 0.795609 -2.683901 1.55874 -2.12132 2.12132 
+C -1.55874 2.683901 -0.795609 3 0 3 
+z
+" style="stroke: #e8862a"/>
+    </defs>
+    <g clip-path="url(#p246f12b09a)">
+     <use xlink:href="#mdfccdd7a6f" x="181.151158" y="32.355559" style="fill: #e8862a; stroke: #e8862a"/>
+    </g>
+   </g>
+   <g id="patch_4">
+    <path d="M 50.105703 162.432 
+L 50.105703 7.2 
+" style="fill: none; stroke: #444444; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="patch_5">
+    <path d="M 50.105703 162.432 
+L 396.065703 162.432 
+" style="fill: none; stroke: #444444; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="legend_1">
+    <g id="patch_6">
+     <path d="M 218.764531 131.07907 
+L 233.764531 131.07907 
+L 233.764531 125.82907 
+L 218.764531 125.82907 
+z
+" style="fill: #2f7fd8; opacity: 0.12; stroke: #2f7fd8; stroke-linejoin: miter"/>
+    </g>
+    <g id="text_16">
+     <text style="font-size: 7.5px; font-family: 'DejaVu Sans'; text-anchor: start" x="239.764531" y="131.07907" transform="rotate(-0 239.764531 131.07907)">Rango donde el precio sombra es 0,125</text>
+    </g>
+    <g id="line2d_30">
+     <g>
+      <use xlink:href="#mce432bef14" x="226.264531" y="139.704656" style="fill: #d64545; stroke: #d64545"/>
+     </g>
+    </g>
+    <g id="text_17">
+     <text style="font-size: 7.5px; font-family: 'DejaVu Sans'; text-anchor: start" x="239.764531" y="142.329656" transform="rotate(-0 239.764531 142.329656)">Presupuesto actual (720 USD)</text>
+    </g>
+    <g id="line2d_31">
+     <g>
+      <use xlink:href="#mdfccdd7a6f" x="226.264531" y="151.255242" style="fill: #e8862a; stroke: #e8862a"/>
+     </g>
+    </g>
+    <g id="text_18">
+     <text style="font-size: 7.5px; font-family: 'DejaVu Sans'; text-anchor: start" x="239.764531" y="153.880242" transform="rotate(-0 239.764531 153.880242)">Después del recorte (540 USD)</text>
+    </g>
+   </g>
+  </g>
+ </g>
+ <defs>
+  <clipPath id="p246f12b09a">
+   <rect x="50.105703" y="7.2" width="345.96" height="155.232"/>
+  </clipPath>
+ </defs>
+</svg>
+<figcaption>Figura 5. Valor neto óptimo según el presupuesto de gasto extra.</figcaption></figure>
+<h2>8.3 Costos reducidos</h2>
+<p>Los tramos que no se usan tienen costo reducido negativo: el tramo 3 de Luis, Pedro, Carla y Diego rinde entre
+0,45 y 0,55 USD por dólar y cuesta 1, así que meterlo en la solución empeora Z. El de Sara (0,425) tampoco entra.</p>
+<h2>8.4 Alertas para la gerencia</h2>
+<p>Al comparar el uso óptimo con lo que pasó el mes anterior, la empresa sabe a quién avisarle:</p>
+<table class=""><thead><tr><th class="">Persona</th><th class="num">Gasto mes pasado</th><th class="num">Tope óptimo</th><th class="num">Alerta</th></tr></thead><tbody><tr><td class="">Ana</td><td class="num">420</td><td class="num">360</td><td class="num ">Bajar 60</td></tr><tr><td class="">Luis</td><td class="num">180</td><td class="num">250</td><td class="num ">Puede usar 70 más</td></tr><tr><td class="">Sara</td><td class="num">95</td><td class="num">150</td><td class="num ">Puede usar 55 más</td></tr><tr><td class="">Pedro</td><td class="num">260</td><td class="num">250</td><td class="num ">Bajar 10</td></tr><tr><td class="">Carla</td><td class="num">310</td><td class="num">250</td><td class="num ">Bajar 60</td></tr><tr><td class="">Diego</td><td class="num">60</td><td class="num">200</td><td class="num ">Puede usar 140 más</td></tr></tbody></table>
+
+<h1 id="s9">9. Ajuste a mitad de mes: Dual Simplex</h1>
+<p>A mitad de mes la gerencia recorta el presupuesto extra un 25 %: de 720 USD a
+540 USD. Solo cambia un lado derecho, así que la tabla óptima sigue cumpliendo la condición de optimalidad
+(todos los z<sub>j</sub> − c<sub>j</sub> ≥ 0) pero puede dejar de ser factible. Es el caso para el Dual Simplex: se sigue
+desde la tabla anterior en lugar de empezar de cero.</p>
+<h2>9.1 Desarrollo en la vista por equipos</h2>
+<p>El nuevo lado derecho se obtiene con B<sup>−1</sup>Δb, donde B<sup>−1</sup> son las columnas de las holguras en la tabla
+óptima y Δb = (−180, 0, 0). La fila Z cambia en los precios sombra por Δb: 1.438 − 1,8 × 180 = 1.114.</p>
+<div class="pasos"><div class="paso"><div class="paso-t"><span class="pn">0</span>Se cambia el lado derecho: la tabla sigue siendo óptima pero ya no es factible. Sale <b>y2</b> (solución negativa) y entra <b>h2</b> (menor |z<sub>j</sub> / a<sub>ij</sub>| con a<sub>ij</sub> &lt; 0).</div><table class="mat simplex"><thead><tr><th>Base</th><th class="num">y1</th><th class="num">y2</th><th class="num">h1</th><th class="num">h2</th><th class="num">h3</th><th class="num">Solución</th></tr></thead><tbody><tr class=""><th>y2</th><td class="num fpiv">0</td><td class="num fpiv">1</td><td class="num fpiv">1</td><td class="num fpiv cpiv piv">-1</td><td class="num fpiv">0</td><td class="num fpiv neg">-20</td></tr><tr class=""><th>y1</th><td class="num ">1</td><td class="num ">0</td><td class="num ">0</td><td class="num cpiv">1</td><td class="num ">0</td><td class="num ">460</td></tr><tr class=""><th>h3</th><td class="num ">0</td><td class="num ">0</td><td class="num ">-1</td><td class="num cpiv">1</td><td class="num ">1</td><td class="num ">520</td></tr><tr class="zfila"><th>Z</th><td class="num ">0</td><td class="num ">0</td><td class="num ">1,8</td><td class="num cpiv">0,7</td><td class="num ">0</td><td class="num ">1.114</td></tr><tr class="razon"><th>|z<sub>j</sub>/a<sub>ij</sub>|</th><td class="num tenue">—</td><td class="num tenue">—</td><td class="num tenue">—</td><td class="num tenue">0,7</td><td class="num tenue">—</td><td class="num tenue">—</td></tr></tbody></table></div><div class="paso"><div class="paso-t"><span class="pn">1</span>Sale y2 y entra h2: Z = 1100. Todas las soluciones son no negativas: es factible y óptima.</div><table class="mat simplex"><thead><tr><th>Base</th><th class="num">y1</th><th class="num">y2</th><th class="num">h1</th><th class="num">h2</th><th class="num">h3</th><th class="num">Solución</th></tr></thead><tbody><tr class=""><th>h2</th><td class="num ">0</td><td class="num ">-1</td><td class="num ">-1</td><td class="num ">1</td><td class="num ">0</td><td class="num ">20</td></tr><tr class=""><th>y1</th><td class="num ">1</td><td class="num ">1</td><td class="num ">1</td><td class="num ">0</td><td class="num ">0</td><td class="num ">440</td></tr><tr class=""><th>h3</th><td class="num ">0</td><td class="num ">1</td><td class="num ">0</td><td class="num ">0</td><td class="num ">1</td><td class="num ">500</td></tr><tr class="zfila"><th>Z</th><td class="num ">0</td><td class="num ">0,7</td><td class="num ">2,5</td><td class="num ">0</td><td class="num ">0</td><td class="num ">1.100</td></tr></tbody></table></div></div>
+<p>Queda y<sub>1</sub> = 440, y<sub>2</sub> = 0: x<sub>1</sub> = <b>440</b>, x<sub>2</sub> = <b>100</b> y
+Z = 1.100 + 180 = <b>1.280</b>. Frontend baja a su mínimo y Backend absorbe el resto del recorte. Con un solo pivoteo
+se llega al nuevo óptimo.</p>
+<h2>9.2 Recorte en el modelo completo</h2>
+<p>El Modelo 1 completo se reoptimizó con el Dual Simplex de HiGHS (<code>method="highs-ds"</code>):</p>
+<table class=""><thead><tr><th class="">Persona</th><th class="num">Tope antes</th><th class="num">Tope después</th><th class="num">Cambio</th></tr></thead><tbody><tr><td class="">Ana</td><td class="num">360</td><td class="num">360</td><td class="num">0</td></tr><tr><td class="">Luis</td><td class="num">250</td><td class="num">250</td><td class="num">0</td></tr><tr><td class="">Sara</td><td class="num">150</td><td class="num">150</td><td class="num">0</td></tr><tr><td class="">Pedro</td><td class="num">250</td><td class="num">170</td><td class="num">-80</td></tr><tr><td class="">Carla</td><td class="num">250</td><td class="num">250</td><td class="num">0</td></tr><tr><td class="">Diego</td><td class="num">200</td><td class="num">100</td><td class="num">-100</td></tr></tbody></table>
+<figure><svg xmlns:xlink="http://www.w3.org/1999/xlink" width="397.539453pt" height="169.000703pt" viewBox="0 0 397.539453 169.000703" xmlns="http://www.w3.org/2000/svg" version="1.1">
+ <metadata>
+  <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+   <cc:Work>
+    <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+    <dc:date>2026-11-25T14:39:41.732386</dc:date>
+    <dc:format>image/svg+xml</dc:format>
+    <dc:creator>
+     <cc:Agent>
+      <dc:title>Matplotlib v3.11.2, https://matplotlib.org/</dc:title>
+     </cc:Agent>
+    </dc:creator>
+   </cc:Work>
+  </rdf:RDF>
+ </metadata>
+ <defs>
+  <style type="text/css">*{stroke-linejoin: round; stroke-linecap: butt}</style>
+ </defs>
+ <g id="figure_1">
+  <g id="patch_1">
+   <path d="M 0 169.000703 
+L 397.539453 169.000703 
+L 397.539453 0 
+L 0 0 
+z
+" style="fill: #ffffff"/>
+  </g>
+  <g id="axes_1">
+   <g id="patch_2">
+    <path d="M 44.379453 145.8 
+L 390.339453 145.8 
+L 390.339453 7.2 
+L 44.379453 7.2 
+z
+" style="fill: #ffffff"/>
+   </g>
+   <g id="matplotlib.axis_1">
+    <g id="xtick_1">
+     <g id="line2d_1">
+      <defs>
+       <path id="ma35f238155" d="M 0 0 
+L 0 3.5 
+" style="stroke: #333333; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#ma35f238155" x="80.378142" y="145.8" style="fill: #333333; stroke: #333333; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_1">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #333333" x="80.378142" y="159.637891" transform="rotate(-0 80.378142 159.637891)">Ana</text>
+     </g>
+    </g>
+    <g id="xtick_2">
+     <g id="line2d_2">
+      <g>
+       <use xlink:href="#ma35f238155" x="135.170666" y="145.8" style="fill: #333333; stroke: #333333; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_2">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #333333" x="135.170666" y="159.638594" transform="rotate(-0 135.170666 159.638594)">Luis</text>
+     </g>
+    </g>
+    <g id="xtick_3">
+     <g id="line2d_3">
+      <g>
+       <use xlink:href="#ma35f238155" x="189.963191" y="145.8" style="fill: #333333; stroke: #333333; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_3">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #333333" x="189.963191" y="159.637891" transform="rotate(-0 189.963191 159.637891)">Sara</text>
+     </g>
+    </g>
+    <g id="xtick_4">
+     <g id="line2d_4">
+      <g>
+       <use xlink:href="#ma35f238155" x="244.755715" y="145.8" style="fill: #333333; stroke: #333333; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_4">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #333333" x="244.755715" y="159.638594" transform="rotate(-0 244.755715 159.638594)">Pedro</text>
+     </g>
+    </g>
+    <g id="xtick_5">
+     <g id="line2d_5">
+      <g>
+       <use xlink:href="#ma35f238155" x="299.54824" y="145.8" style="fill: #333333; stroke: #333333; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_5">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #333333" x="299.54824" y="159.638594" transform="rotate(-0 299.54824 159.638594)">Carla</text>
+     </g>
+    </g>
+    <g id="xtick_6">
+     <g id="line2d_6">
+      <g>
+       <use xlink:href="#ma35f238155" x="354.340764" y="145.8" style="fill: #333333; stroke: #333333; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_6">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #333333" x="354.340764" y="159.638594" transform="rotate(-0 354.340764 159.638594)">Diego</text>
+     </g>
+    </g>
+   </g>
+   <g id="matplotlib.axis_2">
+    <g id="ytick_1">
+     <g id="line2d_7">
+      <path d="M 44.379453 145.8 
+L 390.339453 145.8 
+" clip-path="url(#p36ed01e284)" style="fill: none; stroke: #e6e6e6; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_8">
+      <defs>
+       <path id="md47b36695e" d="M 0 0 
+L -3.5 0 
+" style="stroke: #333333; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#md47b36695e" x="44.379453" y="145.8" style="fill: #333333; stroke: #333333; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_7">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: end; fill: #333333" x="37.379453" y="149.218945" transform="rotate(-0 37.379453 149.218945)">0</text>
+     </g>
+    </g>
+    <g id="ytick_2">
+     <g id="line2d_9">
+      <path d="M 44.379453 113.567442 
+L 390.339453 113.567442 
+" clip-path="url(#p36ed01e284)" style="fill: none; stroke: #e6e6e6; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_10">
+      <g>
+       <use xlink:href="#md47b36695e" x="44.379453" y="113.567442" style="fill: #333333; stroke: #333333; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_8">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: end; fill: #333333" x="37.379453" y="116.986387" transform="rotate(-0 37.379453 116.986387)">100</text>
+     </g>
+    </g>
+    <g id="ytick_3">
+     <g id="line2d_11">
+      <path d="M 44.379453 81.334884 
+L 390.339453 81.334884 
+" clip-path="url(#p36ed01e284)" style="fill: none; stroke: #e6e6e6; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_12">
+      <g>
+       <use xlink:href="#md47b36695e" x="44.379453" y="81.334884" style="fill: #333333; stroke: #333333; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_9">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: end; fill: #333333" x="37.379453" y="84.753829" transform="rotate(-0 37.379453 84.753829)">200</text>
+     </g>
+    </g>
+    <g id="ytick_4">
+     <g id="line2d_13">
+      <path d="M 44.379453 49.102326 
+L 390.339453 49.102326 
+" clip-path="url(#p36ed01e284)" style="fill: none; stroke: #e6e6e6; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_14">
+      <g>
+       <use xlink:href="#md47b36695e" x="44.379453" y="49.102326" style="fill: #333333; stroke: #333333; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_10">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: end; fill: #333333" x="37.379453" y="52.521271" transform="rotate(-0 37.379453 52.521271)">300</text>
+     </g>
+    </g>
+    <g id="ytick_5">
+     <g id="line2d_15">
+      <path d="M 44.379453 16.869767 
+L 390.339453 16.869767 
+" clip-path="url(#p36ed01e284)" style="fill: none; stroke: #e6e6e6; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_16">
+      <g>
+       <use xlink:href="#md47b36695e" x="44.379453" y="16.869767" style="fill: #333333; stroke: #333333; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_11">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: end; fill: #333333" x="37.379453" y="20.288713" transform="rotate(-0 37.379453 20.288713)">400</text>
+     </g>
+    </g>
+    <g id="text_12">
+     <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #222222" x="14.038594" y="76.5" transform="rotate(-90 14.038594 76.5)">USD de uso al mes</text>
+    </g>
+   </g>
+   <g id="patch_3">
+    <path d="M 60.104908 145.8 
+L 79.830217 145.8 
+L 79.830217 29.762791 
+L 60.104908 29.762791 
+z
+" clip-path="url(#p36ed01e284)" style="fill: #9a9aa2"/>
+   </g>
+   <g id="patch_4">
+    <path d="M 114.897432 145.8 
+L 134.622741 145.8 
+L 134.622741 65.218605 
+L 114.897432 65.218605 
+z
+" clip-path="url(#p36ed01e284)" style="fill: #9a9aa2"/>
+   </g>
+   <g id="patch_5">
+    <path d="M 169.689957 145.8 
+L 189.415266 145.8 
+L 189.415266 97.451163 
+L 169.689957 97.451163 
+z
+" clip-path="url(#p36ed01e284)" style="fill: #9a9aa2"/>
+   </g>
+   <g id="patch_6">
+    <path d="M 224.482481 145.8 
+L 244.20779 145.8 
+L 244.20779 65.218605 
+L 224.482481 65.218605 
+z
+" clip-path="url(#p36ed01e284)" style="fill: #9a9aa2"/>
+   </g>
+   <g id="patch_7">
+    <path d="M 279.275006 145.8 
+L 299.000315 145.8 
+L 299.000315 65.218605 
+L 279.275006 65.218605 
+z
+" clip-path="url(#p36ed01e284)" style="fill: #9a9aa2"/>
+   </g>
+   <g id="patch_8">
+    <path d="M 334.06753 145.8 
+L 353.792839 145.8 
+L 353.792839 81.334884 
+L 334.06753 81.334884 
+z
+" clip-path="url(#p36ed01e284)" style="fill: #9a9aa2"/>
+   </g>
+   <g id="patch_9">
+    <path d="M 80.926067 145.8 
+L 100.651376 145.8 
+L 100.651376 29.762791 
+L 80.926067 29.762791 
+z
+" clip-path="url(#p36ed01e284)" style="fill: #8a4fe0"/>
+   </g>
+   <g id="patch_10">
+    <path d="M 135.718592 145.8 
+L 155.4439 145.8 
+L 155.4439 65.218605 
+L 135.718592 65.218605 
+z
+" clip-path="url(#p36ed01e284)" style="fill: #8a4fe0"/>
+   </g>
+   <g id="patch_11">
+    <path d="M 190.511116 145.8 
+L 210.236425 145.8 
+L 210.236425 97.451163 
+L 190.511116 97.451163 
+z
+" clip-path="url(#p36ed01e284)" style="fill: #8a4fe0"/>
+   </g>
+   <g id="patch_12">
+    <path d="M 245.303641 145.8 
+L 265.028949 145.8 
+L 265.028949 91.004651 
+L 245.303641 91.004651 
+z
+" clip-path="url(#p36ed01e284)" style="fill: #8a4fe0"/>
+   </g>
+   <g id="patch_13">
+    <path d="M 300.096165 145.8 
+L 319.821474 145.8 
+L 319.821474 65.218605 
+L 300.096165 65.218605 
+z
+" clip-path="url(#p36ed01e284)" style="fill: #8a4fe0"/>
+   </g>
+   <g id="patch_14">
+    <path d="M 354.88869 145.8 
+L 374.613999 145.8 
+L 374.613999 113.567442 
+L 354.88869 113.567442 
+z
+" clip-path="url(#p36ed01e284)" style="fill: #8a4fe0"/>
+   </g>
+   <g id="patch_15">
+    <path d="M 44.379453 145.8 
+L 44.379453 7.2 
+" style="fill: none; stroke: #444444; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="patch_16">
+    <path d="M 44.379453 145.8 
+L 390.339453 145.8 
+" style="fill: none; stroke: #444444; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="text_13">
+    <text style="font-size: 7px; font-family: 'DejaVu Sans'; text-anchor: middle" x="69.967562" y="27.828837" transform="rotate(-0 69.967562 27.828837)">360</text>
+   </g>
+   <g id="text_14">
+    <text style="font-size: 7px; font-family: 'DejaVu Sans'; text-anchor: middle" x="90.788721" y="27.828837" transform="rotate(-0 90.788721 27.828837)">360</text>
+   </g>
+   <g id="text_15">
+    <text style="font-size: 7px; font-family: 'DejaVu Sans'; text-anchor: middle" x="124.760087" y="63.284651" transform="rotate(-0 124.760087 63.284651)">250</text>
+   </g>
+   <g id="text_16">
+    <text style="font-size: 7px; font-family: 'DejaVu Sans'; text-anchor: middle" x="145.581246" y="63.284651" transform="rotate(-0 145.581246 63.284651)">250</text>
+   </g>
+   <g id="text_17">
+    <text style="font-size: 7px; font-family: 'DejaVu Sans'; text-anchor: middle" x="179.552611" y="95.517209" transform="rotate(-0 179.552611 95.517209)">150</text>
+   </g>
+   <g id="text_18">
+    <text style="font-size: 7px; font-family: 'DejaVu Sans'; text-anchor: middle" x="200.373771" y="95.517209" transform="rotate(-0 200.373771 95.517209)">150</text>
+   </g>
+   <g id="text_19">
+    <text style="font-size: 7px; font-family: 'DejaVu Sans'; text-anchor: middle" x="234.345136" y="63.284651" transform="rotate(-0 234.345136 63.284651)">250</text>
+   </g>
+   <g id="text_20">
+    <text style="font-size: 7px; font-family: 'DejaVu Sans'; text-anchor: middle" x="255.166295" y="89.070698" transform="rotate(-0 255.166295 89.070698)">170</text>
+   </g>
+   <g id="text_21">
+    <text style="font-size: 7px; font-family: 'DejaVu Sans'; text-anchor: middle" x="289.13766" y="63.284651" transform="rotate(-0 289.13766 63.284651)">250</text>
+   </g>
+   <g id="text_22">
+    <text style="font-size: 7px; font-family: 'DejaVu Sans'; text-anchor: middle" x="309.95882" y="63.284651" transform="rotate(-0 309.95882 63.284651)">250</text>
+   </g>
+   <g id="text_23">
+    <text style="font-size: 7px; font-family: 'DejaVu Sans'; text-anchor: middle" x="343.930185" y="79.40093" transform="rotate(-0 343.930185 79.40093)">200</text>
+   </g>
+   <g id="text_24">
+    <text style="font-size: 7px; font-family: 'DejaVu Sans'; text-anchor: middle" x="364.751344" y="111.633488" transform="rotate(-0 364.751344 111.633488)">100</text>
+   </g>
+   <g id="legend_1">
+    <g id="patch_17">
+     <path d="M 148.925 19.948828 
+L 163.925 19.948828 
+L 163.925 14.698828 
+L 148.925 14.698828 
+z
+" style="fill: #9a9aa2"/>
+    </g>
+    <g id="text_25">
+     <text style="font-size: 7.5px; font-family: 'DejaVu Sans'; text-anchor: start" x="169.925" y="19.948828" transform="rotate(-0 169.925 19.948828)">Tope antes del recorte</text>
+    </g>
+    <g id="patch_18">
+     <path d="M 268.503125 19.948828 
+L 283.503125 19.948828 
+L 283.503125 14.698828 
+L 268.503125 14.698828 
+z
+" style="fill: #8a4fe0"/>
+    </g>
+    <g id="text_26">
+     <text style="font-size: 7.5px; font-family: 'DejaVu Sans'; text-anchor: start" x="289.503125" y="19.948828" transform="rotate(-0 289.503125 19.948828)">Tope después del recorte</text>
+    </g>
+   </g>
+  </g>
+ </g>
+ <defs>
+  <clipPath id="p36ed01e284">
+   <rect x="44.379453" y="7.2" width="345.96" height="138.6"/>
+  </clipPath>
+ </defs>
+</svg>
+<figcaption>Figura 6. Topes de uso antes y después del recorte.</figcaption></figure>
+<p>Pierden uso Pedro y Diego, que eran los que estaban en el margen. El valor neto baja de 1.808,5 a
+1.781,0 (27,5 menos), justo lo que anticipaban los precios sombra: 100 USD
+del recorte a 0,125 (dentro del rango) y los 80 restantes a 0,1875, el nuevo
+precio sombra. La factura del mes queda en 630 USD.</p>
+
+<h1 id="s10">10. Validación</h1>
+<h2>10.1 El ciclo contra un solo modelo</h2>
+<p>Para comprobar que dividir el problema en etapas no pierde nada, se armó un modelo lineal unido que decide al mismo
+tiempo cuánto usa cada persona y con qué fuente se paga cada dólar (bolsas, batch y API), con el mismo presupuesto.
+Su óptimo da los mismos topes y un valor del tiempo ahorrado menos el pago variable de 1.933,5 USD, igual a
+lo que da el ciclo (2.528,5 − 595). La diferencia es <b>0,00 USD</b>.</p>
+<h2>10.2 Pruebas automáticas</h2>
+<p>El programa tiene 99 pruebas que pasan (<code>pytest</code>). Entre ellas:</p>
+<ul>
+<li>El método húngaro programado a mano da el mismo costo que SciPy en matrices aleatorias.</li>
+<li>El Simplex y el Dual Simplex en tabla dan el mismo óptimo que <code>linprog</code> en problemas aleatorios.</li>
+<li>MODI llega al óptimo del solver desde las tres soluciones iniciales.</li>
+<li>El método gráfico reproduce el ejemplo (460, 260) con Z = 1.618.</li>
+<li>El precio sombra predice el cambio del óptimo cuando el presupuesto sube un dólar.</li>
+<li>El ciclo da lo mismo que el modelo unido y respeta todas las reglas de la empresa.</li>
+</ul>
+<h2>10.3 Excel con Solver</h2>
+<p>El archivo <code>resultados/modelos-solver.xlsx</code> trae cada modelo en su hoja ("Modelo 0 asignación",
+"Modelo 1 reparto", "Modelo 2 transporte" y "Dos equipos"), con las celdas de decisión en amarillo, la función objetivo en
+azul y Solver ya configurado (método Simplex LP). Para resolver una hoja: Datos → Solver → Resolver. La hoja
+"Solución Python" guarda la respuesta del programa para comparar. Al llenar las celdas de decisión con la solución del
+programa, las fórmulas del Excel dan 785 USD, 1.808,5, 595 USD y 1.618.</p>
+
+<h1 id="s11">11. Resultados</h1>
+<p>Esto es lo que el programa le entrega a la empresa: el plan de cada persona y el tope que debe configurar en la consola
+de cada proveedor.</p>
+<table class=""><thead><tr><th class="">Persona</th><th class="">Plan</th><th class="num">Tope de uso</th><th class="num">Gasto mes pasado</th><th class="num">Acción</th></tr></thead><tbody><tr><td class="">Ana</td><td class="">Claude Premium</td><td class="num">360</td><td class="num">420</td><td class="num ">Bajar 60</td></tr><tr><td class="">Luis</td><td class="">Cursor Teams</td><td class="num">250</td><td class="num">180</td><td class="num ">Puede usar 70 más</td></tr><tr><td class="">Sara</td><td class="">Cursor Teams</td><td class="num">150</td><td class="num">95</td><td class="num ">Puede usar 55 más</td></tr><tr><td class="">Pedro</td><td class="">Claude Standard</td><td class="num">250</td><td class="num">260</td><td class="num ">Bajar 10</td></tr><tr><td class="">Carla</td><td class="">Solo API</td><td class="num">250</td><td class="num">310</td><td class="num ">Bajar 60</td></tr><tr><td class="">Diego</td><td class="">Solo API</td><td class="num">200</td><td class="num">60</td><td class="num ">Puede usar 140 más</td></tr></tbody></table>
+<div class="cifras">
+<div><span>Factura del mes</span><b>780 USD</b><small>antes 1.325 USD</small></div>
+<div><span>Ahorro</span><b>545 USD</b><small>41 % menos</small></div>
+<div><span>Valor del tiempo ahorrado</span><b>2.528,5 USD</b><small>antes 2.248,5 USD</small></div>
+<div><span>Valor neto</span><b>1.748,5 USD</b><small>antes 923,5 USD</small></div>
+</div>
+<figure><svg xmlns:xlink="http://www.w3.org/1999/xlink" width="432.145937pt" height="150.186889pt" viewBox="0 0 432.145937 150.186889" xmlns="http://www.w3.org/2000/svg" version="1.1">
+ <metadata>
+  <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+   <cc:Work>
+    <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+    <dc:date>2026-11-25T14:39:41.788867</dc:date>
+    <dc:format>image/svg+xml</dc:format>
+    <dc:creator>
+     <cc:Agent>
+      <dc:title>Matplotlib v3.11.2, https://matplotlib.org/</dc:title>
+     </cc:Agent>
+    </dc:creator>
+   </cc:Work>
+  </rdf:RDF>
+ </metadata>
+ <defs>
+  <style type="text/css">*{stroke-linejoin: round; stroke-linecap: butt}</style>
+ </defs>
+ <g id="figure_1">
+  <g id="patch_1">
+   <path d="M 0 150.186889 
+L 432.145937 150.186889 
+L 432.145937 0 
+L 0 0 
+z
+" style="fill: #ffffff"/>
+  </g>
+  <g id="axes_1">
+   <g id="patch_2">
+    <path d="M 78.985938 113.986186 
+L 424.945938 113.986186 
+L 424.945938 19.738186 
+L 78.985938 19.738186 
+z
+" style="fill: #ffffff"/>
+   </g>
+   <g id="matplotlib.axis_1">
+    <g id="xtick_1">
+     <g id="line2d_1">
+      <path d="M 78.985938 113.986186 
+L 78.985938 19.738186 
+" clip-path="url(#p69b8785962)" style="fill: none; stroke: #e6e6e6; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_2">
+      <defs>
+       <path id="maa46eafbd0" d="M 0 0 
+L 0 3.5 
+" style="stroke: #333333; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#maa46eafbd0" x="78.985938" y="113.986186" style="fill: #333333; stroke: #333333; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_1">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #333333" x="78.985938" y="127.824077" transform="rotate(-0 78.985938 127.824077)">0</text>
+     </g>
+    </g>
+    <g id="xtick_2">
+     <g id="line2d_3">
+      <path d="M 122.502919 113.986186 
+L 122.502919 19.738186 
+" clip-path="url(#p69b8785962)" style="fill: none; stroke: #e6e6e6; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_4">
+      <g>
+       <use xlink:href="#maa46eafbd0" x="122.502919" y="113.986186" style="fill: #333333; stroke: #333333; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_2">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #333333" x="122.502919" y="127.824077" transform="rotate(-0 122.502919 127.824077)">200</text>
+     </g>
+    </g>
+    <g id="xtick_3">
+     <g id="line2d_5">
+      <path d="M 166.0199 113.986186 
+L 166.0199 19.738186 
+" clip-path="url(#p69b8785962)" style="fill: none; stroke: #e6e6e6; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_6">
+      <g>
+       <use xlink:href="#maa46eafbd0" x="166.0199" y="113.986186" style="fill: #333333; stroke: #333333; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_3">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #333333" x="166.0199" y="127.824077" transform="rotate(-0 166.0199 127.824077)">400</text>
+     </g>
+    </g>
+    <g id="xtick_4">
+     <g id="line2d_7">
+      <path d="M 209.536881 113.986186 
+L 209.536881 19.738186 
+" clip-path="url(#p69b8785962)" style="fill: none; stroke: #e6e6e6; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_8">
+      <g>
+       <use xlink:href="#maa46eafbd0" x="209.536881" y="113.986186" style="fill: #333333; stroke: #333333; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_4">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #333333" x="209.536881" y="127.824077" transform="rotate(-0 209.536881 127.824077)">600</text>
+     </g>
+    </g>
+    <g id="xtick_5">
+     <g id="line2d_9">
+      <path d="M 253.053862 113.986186 
+L 253.053862 19.738186 
+" clip-path="url(#p69b8785962)" style="fill: none; stroke: #e6e6e6; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_10">
+      <g>
+       <use xlink:href="#maa46eafbd0" x="253.053862" y="113.986186" style="fill: #333333; stroke: #333333; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_5">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #333333" x="253.053862" y="127.824077" transform="rotate(-0 253.053862 127.824077)">800</text>
+     </g>
+    </g>
+    <g id="xtick_6">
+     <g id="line2d_11">
+      <path d="M 296.570843 113.986186 
+L 296.570843 19.738186 
+" clip-path="url(#p69b8785962)" style="fill: none; stroke: #e6e6e6; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_12">
+      <g>
+       <use xlink:href="#maa46eafbd0" x="296.570843" y="113.986186" style="fill: #333333; stroke: #333333; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_6">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #333333" x="296.570843" y="127.824077" transform="rotate(-0 296.570843 127.824077)">1000</text>
+     </g>
+    </g>
+    <g id="xtick_7">
+     <g id="line2d_13">
+      <path d="M 340.087824 113.986186 
+L 340.087824 19.738186 
+" clip-path="url(#p69b8785962)" style="fill: none; stroke: #e6e6e6; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_14">
+      <g>
+       <use xlink:href="#maa46eafbd0" x="340.087824" y="113.986186" style="fill: #333333; stroke: #333333; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_7">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #333333" x="340.087824" y="127.824077" transform="rotate(-0 340.087824 127.824077)">1200</text>
+     </g>
+    </g>
+    <g id="xtick_8">
+     <g id="line2d_15">
+      <path d="M 383.604805 113.986186 
+L 383.604805 19.738186 
+" clip-path="url(#p69b8785962)" style="fill: none; stroke: #e6e6e6; stroke-width: 0.6; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_16">
+      <g>
+       <use xlink:href="#maa46eafbd0" x="383.604805" y="113.986186" style="fill: #333333; stroke: #333333; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_8">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #333333" x="383.604805" y="127.824077" transform="rotate(-0 383.604805 127.824077)">1400</text>
+     </g>
+    </g>
+    <g id="text_9">
+     <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #222222" x="251.965938" y="140.82478" transform="rotate(-0 251.965938 140.82478)">USD al mes</text>
+    </g>
+   </g>
+   <g id="matplotlib.axis_2">
+    <g id="ytick_1">
+     <g id="line2d_17">
+      <defs>
+       <path id="mb51cdfc326" d="M 0 0 
+L -3.5 0 
+" style="stroke: #333333; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#mb51cdfc326" x="78.985938" y="95.422186" style="fill: #333333; stroke: #333333; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_10">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: end; fill: #333333" x="71.985938" y="98.841483" transform="rotate(-0 71.985938 98.841483)">Con el modelo</text>
+     </g>
+    </g>
+    <g id="ytick_2">
+     <g id="line2d_18">
+      <g>
+       <use xlink:href="#mb51cdfc326" x="78.985938" y="38.302186" style="fill: #333333; stroke: #333333; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_11">
+      <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: end; fill: #333333" x="71.985938" y="41.721483" transform="rotate(-0 71.985938 41.721483)">Mes pasado</text>
+     </g>
+    </g>
+   </g>
+   <g id="patch_3">
+    <path d="M 78.985938 52.582186 
+L 367.285938 52.582186 
+L 367.285938 24.022186 
+L 78.985938 24.022186 
+z
+" clip-path="url(#p69b8785962)" style="fill: #9a9aa2"/>
+   </g>
+   <g id="patch_4">
+    <path d="M 78.985938 109.702186 
+L 119.239145 109.702186 
+L 119.239145 81.142186 
+L 78.985938 81.142186 
+z
+" clip-path="url(#p69b8785962)" style="fill: #2f7fd8"/>
+   </g>
+   <g id="patch_5">
+    <path d="M 119.239145 109.702186 
+L 248.702164 109.702186 
+L 248.702164 81.142186 
+L 119.239145 81.142186 
+z
+" clip-path="url(#p69b8785962)" style="fill: #8a4fe0"/>
+   </g>
+   <g id="patch_6">
+    <path d="M 78.985938 113.986186 
+L 78.985938 19.738186 
+" style="fill: none; stroke: #444444; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="patch_7">
+    <path d="M 78.985938 113.986186 
+L 424.945938 113.986186 
+" style="fill: none; stroke: #444444; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="text_12">
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'; text-anchor: start" x="370.549711" y="40.380311" transform="rotate(-0 370.549711 40.380311)">1.325 USD</text>
+   </g>
+   <g id="text_13">
+    <text style="font-size: 8px; font-family: 'DejaVu Sans'; text-anchor: start" x="251.965937" y="97.500311" transform="rotate(-0 251.965937 97.500311)">780 USD</text>
+   </g>
+   <g id="legend_1">
+    <g id="patch_8">
+     <path d="M 190.574453 15.898828 
+L 205.574453 15.898828 
+L 205.574453 10.648828 
+L 190.574453 10.648828 
+z
+" style="fill: #2f7fd8"/>
+    </g>
+    <g id="text_14">
+     <text style="font-size: 7.5px; font-family: 'DejaVu Sans'; text-anchor: start" x="211.574453" y="15.898828" transform="rotate(-0 211.574453 15.898828)">Cuotas de asientos</text>
+    </g>
+    <g id="patch_9">
+     <path d="M 298.131484 15.898828 
+L 313.131484 15.898828 
+L 313.131484 10.648828 
+L 298.131484 10.648828 
+z
+" style="fill: #8a4fe0"/>
+    </g>
+    <g id="text_15">
+     <text style="font-size: 7.5px; font-family: 'DejaVu Sans'; text-anchor: start" x="319.131484" y="15.898828" transform="rotate(-0 319.131484 15.898828)">Pago por uso (API y batch)</text>
+    </g>
+   </g>
+  </g>
+ </g>
+ <defs>
+  <clipPath id="p69b8785962">
+   <rect x="78.985938" y="19.738186" width="345.96" height="94.248"/>
+  </clipPath>
+ </defs>
+</svg>
+<figcaption>Figura 7. Factura del mes pasado contra la factura con el modelo.</figcaption></figure>
+<p>La factura baja de 1.325 USD a <b>780 USD</b> (185 USD de cuotas y
+595 USD de pago por uso) y el tiempo que ahorra la IA sube, porque el uso se mueve de quien ya estaba en
+tramos que rinden poco (Ana, Carla) a quien tenía espacio (Luis, Sara, Diego). El ahorro no sale de usar menos IA: el
+uso total pasa de 1.325 a 1.460 USD, mejor repartidos y pagados con planes,
+bolsas y batch en lugar de API a precio de lista.</p>
+
+<h1 id="s12">12. El programa</h1>
+<p>El programa está hecho en Python. El motor tiene los métodos del curso programados a mano para mostrar cada paso
+(húngaro, Simplex y Dual Simplex en tabla, noroeste, costo mínimo, Vogel y MODI) y usa SciPy (HiGHS) para el modelo
+completo y para comprobar los resultados. Una API con FastAPI sirve una interfaz web con dos vistas:</p>
+<ul>
+<li><b>Vista empresa</b>, pensada primero para el celular. La empresa pone sus datos y recibe su plan. Tiene un panel con
+las cifras del mes, la lista de lo que hay que hacer, los topes de cada persona y el seguimiento durante el mes con la
+proyección al cierre. Al cerrar el mes, el gasto real pasa a ser el dato del mes siguiente: es el ciclo mensual del modelo.
+Los métodos trabajan por detrás y se explican en lenguaje de negocio (por ejemplo, el precio sombra aparece como "subir el
+presupuesto 100 USD deja tantos USD más").</li>
+<li><b>Vista clase</b>, opcional: una página por paso del ciclo con el desarrollo de cada método.</li>
+</ul>
+<p>El motor también balancea solo el problema de asignación (agrega cupos de solo API o personas ficticias), así la
+empresa puede tener cualquier número de personas.</p>
+<table><thead><tr><th>Archivo</th><th>Qué hace</th></tr></thead><tbody>
+<tr><td><code>optimizador/caso.py</code></td><td>Datos del caso de estudio (única fuente para el programa, el Excel y este informe).</td></tr>
+<tr><td><code>optimizador/asignacion.py</code></td><td>Método húngaro con cada paso y la matriz de costos de los planes.</td></tr>
+<tr><td><code>optimizador/simplex.py</code></td><td>Simplex y Dual Simplex en tabla.</td></tr>
+<tr><td><code>optimizador/transporte.py</code></td><td>Esquina noroeste, costo mínimo, Vogel y MODI.</td></tr>
+<tr><td><code>optimizador/grafico.py</code></td><td>Vértices de la región factible para el método gráfico.</td></tr>
+<tr><td><code>optimizador/ciclo.py</code></td><td>Arma los modelos y los encadena; el modelo unido para validar.</td></tr>
+<tr><td><code>optimizador/excel.py</code></td><td>Genera el libro de Excel con Solver configurado.</td></tr>
+<tr><td><code>servidor.py</code> y <code>web/</code></td><td>API e interfaz web.</td></tr>
+<tr><td><code>tests/</code></td><td>Las 99 pruebas.</td></tr>
+</tbody></table>
+<p>Para correrlo: <code>uv venv .venv</code>, <code>uv pip install --python .venv/bin/python -r requirements.txt</code> y
+<code>.venv/bin/uvicorn servidor:app --port 8765</code>; luego se abre <code>http://localhost:8765</code>.</p>
+
+<h1 id="s13">13. Conclusiones</h1>
+<ul>
+<li>El control del gasto en IA se puede plantear con programación lineal sin pedirle a la empresa datos que no tiene:
+basta con salarios, herramientas y el gasto del mes anterior.</li>
+<li>Cada tema del curso responde una pregunta distinta y su resultado le sirve al siguiente: la asignación decide los
+planes, el Simplex reparte el uso, el transporte decide cómo pagarlo, la sensibilidad lo convierte en indicadores y el
+Dual Simplex lo ajusta cuando cambian las reglas.</li>
+<li>Dividir el problema en etapas no pierde optimalidad: el ciclo da lo mismo que un solo modelo lineal (diferencia 0).</li>
+<li>En el caso de estudio la factura baja un 41 % (1.325 USD → 780 USD)
+y el valor del tiempo ahorrado sube de 2.248,5 USD a 2.528,5 USD.</li>
+<li>Los precios sombra son la parte más útil para la gerencia: dicen cuánto vale un dólar más de presupuesto
+(0,125 USD), hasta dónde vale ese número (620 USD a 769 USD) y qué plan vale la pena mejorar.</li>
+</ul>
+<h2>13.1 Supuestos y limitaciones</h2>
+<ul>
+<li>Los rendimientos por tramo (0,2, 0,1 y 0,04 horas por dólar), las bolsas y cuotas de los planes y el 60 %
+de aprovechamiento al cambiar de herramienta son supuestos del caso. Cada empresa los puede ajustar; con el tiempo se
+pueden estimar con sus propios datos.</li>
+<li>El gasto del mes pasado se usa como estimación del siguiente. Por eso el modelo es un ciclo mensual que se corrige
+con lo que realmente pasa.</li>
+<li>En la vista por equipos se supone un valor constante por dólar en cada equipo; el modelo completo usa los tramos de
+cada persona.</li>
+<li>Los precios de los proveedores cambian seguido; el programa trae una tabla de precios oficiales consultada en
+noviembre de 2026 como referencia y los planes del caso se pueden editar.</li>
+</ul>
+<h2>Referencias</h2>
+<ul class="refs">
+<li>Material del curso de Programación Lineal, Universidad de Córdoba: fundamentos y planteamiento, método gráfico, Simplex,
+Dual Simplex, análisis de sensibilidad, métodos de transporte y asignación.</li>
+<li>Taha, H. A. <i>Investigación de operaciones</i>. Pearson.</li>
+<li>Hillier, F. S. y Lieberman, G. J. <i>Introducción a la investigación de operaciones</i>. McGraw-Hill.</li>
+<li>Precios oficiales: Anthropic (platform.claude.com/docs/en/about-claude/pricing), OpenAI (developers.openai.com/api/docs/pricing),
+Cursor (cursor.com/docs/models-and-pricing), Google (aistudio.google.com/docs/pricing). Consultados en noviembre de 2026.</li>
+<li>Virtanen, P. et al. SciPy 1.0: Fundamental Algorithms for Scientific Computing in Python. <i>Nature Methods</i> 17 (2020).
+Huangfu, Q. y Hall, J. A. J. Parallelizing the dual revised simplex method (HiGHS). <i>Mathematical Programming Computation</i> 10 (2018).</li>
+</ul>
+</main></body></html>
