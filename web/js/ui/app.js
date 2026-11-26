@@ -32,7 +32,8 @@ const rr = () => G.plan && G.plan.resultado;           // último plan calculado
 const calculando = () => !!G.caso && (!G.plan || (G.plan.version || 0) < (G.caso.version || 0));
 const errorPlan = () => (G.plan && !calculando() ? G.plan.error : null);
 const zona = () => (G.empresa && G.empresa.zona) || "America/Bogota";
-const conectado = () => G.tokens.some(x => !x.revocado) || Object.keys(G.gasto.personas || {}).length > 0;
+const conectado = () => G.tokens.some(x => !x.revocado) || Object.keys(G.gasto.personas || {}).length > 0
+  || ["cursor", "openai"].some(s => G.empresa?.[s]?.conectado);
 
 /* ------------------------------------------------------------ guardar (en Firestore) */
 let tCaso = null, tSeg = null;
@@ -109,8 +110,12 @@ const diaSeg = () => diaDelMes(G.seg.mes, zona());
 function gastoDe(id, R = reparto()) {
   const auto = R.porId[id] || 0, man = G.seg.manual?.[id];
   const tiene = auto > 0 || (man != null && man !== "");
-  return { auto, manual: Number(man) || 0, total: auto + (Number(man) || 0), tiene };
+  return { auto, manual: Number(man) || 0, total: auto + (Number(man) || 0), tiene, detalle: R.detalle[id] || {} };
 }
+const NOMBRE_HERRAMIENTA = { claude: "Claude", gemini: "Gemini", cursor: "Cursor", openai: "OpenAI" };
+/** «Claude 12,40 USD · Cursor 3,00 USD»: de dónde salió el gasto automático. */
+const textoDesglose = d => Object.entries(d).filter(([, v]) => v > 0.004).sort((a, b) => b[1] - a[1])
+  .map(([h, v]) => `${NOMBRE_HERRAMIENTA[h] || h} ${usd(v, 2)}`).join(" · ");
 function donde(p, plan) {
   if (!plan) return "";
   if (plan.plan !== "Solo API") return t("{plan} · límite en su panel", { plan: plan.plan });
@@ -414,7 +419,7 @@ function estadoDe(p, R) {
 function barraSeg(p, R) {
   const s = estadoDe(p, R), max = Math.max(s.t, s.g, s.proy, 1), g = gastoDe(p.id, R);
   return `<div class="barra"><i class="lleno ${s.clase}" style="width:${(s.g / max) * 100}%"></i>${s.proy > 0 ? `<i class="proy" style="left:calc(${(Math.min(s.proy, max) / max) * 100}% - 1px)" title="${esc(t("Proyección a fin de mes"))}"></i>` : ""}<i class="marca-tope" style="left:calc(${(s.t / max) * 100}% - 1px)"></i></div>
-    <div class="leyenda-barra"><span>${t("Lleva {v}", { v: usd(s.g) })}${g.auto > 0 ? ` · Claude ${usd(g.auto, 2)}` : ""}${s.proy > 0 ? ` · ${t("cierra en ~{v}", { v: usd(s.proy) })}` : ""}</span><span>${t("Tope {v}", { v: usd(s.t) })}</span></div>`;
+    <div class="leyenda-barra"><span>${t("Lleva {v}", { v: usd(s.g) })}${g.auto > 0 ? ` · ${textoDesglose(g.detalle)}` : ""}${s.proy > 0 ? ` · ${t("cierra en ~{v}", { v: usd(s.proy) })}` : ""}</span><span>${t("Tope {v}", { v: usd(s.t) })}</span></div>`;
 }
 function totalesSeg(R = reparto()) {
   const ps = P(), tp = topes();
@@ -425,7 +430,7 @@ function totalesSeg(R = reparto()) {
   return { g, t: tt, proy: (g / dia) * dias, alertas, sin, dia, dias };
 }
 function enVivo(R) {
-  if (!conectado()) return `<a class="estado-vivo apagado" href="#ajustes"><i></i>${t("Claude Code sin conectar")}</a>`;
+  if (!conectado()) return `<a class="estado-vivo apagado" href="#ajustes"><i></i>${t("Sin herramientas conectadas")}</a>`;
   if (!R.ultimo) return `<span class="estado-vivo quieto"><i></i>${t("Conectado · esperando el primer gasto del mes")}</span>`;
   return `<span class="estado-vivo ${Date.now() - R.ultimo < 15 * 60000 ? "" : "quieto"}"><i></i>${t("En vivo · último gasto {h}", { h: hace(R.ultimo) })}</span>`;
 }
@@ -450,7 +455,7 @@ function pantallaSeguimiento() {
   return `<section class="pantalla">
     <div class="titulo">
       <h1>${t("Gasto de {m}, persona por persona", { m: esc(mesCorto(G.seg.mes).toLowerCase()) })}</h1>
-      <p>${t("Lo de Claude Code llega solo, en vivo. Si alguien usa otra herramienta (Cursor, OpenAI…), anota a mano lo que lleva en su casilla.")}</p>
+      <p>${t("Lo de Claude Code y Gemini CLI llega en vivo; Cursor y OpenAI, cada hora si los conectas en Ajustes. Lo que no se reporta solo, anótalo a mano en la casilla de cada persona.")}</p>
     </div>
     <div class="columnas">
       <div class="col">
@@ -462,8 +467,7 @@ function pantallaSeguimiento() {
         <div class="seccion"><h2>${t("Por persona")}</h2>${buscador(P().length, "listaSeg")}<div class="lista" id="listaSeg">${filas}</div></div>
       </div>
       <div class="col">
-        ${R.sinAsignar.length ? `<div class="seccion"><h2>${t("Sin asignar")} <span>${usd(T.sin, 2)}</span></h2>
-          <div class="tarjeta lista">${R.sinAsignar.slice(0, 20).map(x => `<div class="sin-asignar"><div><b>${esc(x.email || t("Sin correo"))}</b><span>${x.email ? t("Usa Claude con este correo y no está en el equipo") : t("Claude Code no envió el correo (ver Ajustes)")}</span></div><b>${usd(x.usd, 2)}</b>${x.email ? `<button class="btn chico" data-agregar-correo="${esc(x.email)}" data-solo-admin>${t("Agregar")}</button>` : ""}</div>`).join("")}</div></div>` : ""}
+        <div id="sinAsignar" style="display:contents">${htmlSinAsignar(R, T)}</div>
         <div class="seccion"><h2>${t("Cerrar el mes")}</h2>
           <div class="tarjeta" style="display:grid;gap:12px">
             <p style="margin:0;color:var(--tx-2);font-size:14px">${t("El día 1 se cierra solo: lo que gastó cada persona pasa a ser su dato del mes pasado y se calcula el plan del siguiente. Si quieres, ciérralo antes.")}</p>
@@ -481,11 +485,19 @@ function htmlTotales(T) {
     <div><span>${t("Cierre estimado")}</span><b class="${T.proy > T.t + 0.5 ? "ambar" : ""}">${usd(T.proy)}</b><span>${t("al ritmo actual")}</span></div>
     <div><span>${t("Alertas")}</span><b class="${T.alertas ? "rojo" : "verde"}">${T.alertas}</b><span>${T.alertas ? t("personas a revisar") : t("todo en orden")}</span></div>`;
 }
+// Gasto de correos que no están en el equipo. Va en su propio contenedor para que el refresco en vivo
+// también lo cree, lo actualice o lo quite.
+function htmlSinAsignar(R, T) {
+  if (!R.sinAsignar.length) return "";
+  return `<div class="seccion"><h2>${t("Sin asignar")} <span>${usd(T.sin, 2)}</span></h2>
+    <div class="tarjeta lista">${R.sinAsignar.slice(0, 20).map(x => `<div class="sin-asignar"><div><b>${esc(x.email || t("Sin correo"))}</b><span>${x.email ? t("Gasta en IA con este correo y no está en el equipo") : t("La herramienta no envió el correo (ver Ajustes)")} · ${textoDesglose(x.detalle || {})}</span></div><b>${usd(x.usd, 2)}</b>${x.email ? `<button class="btn chico" data-agregar-correo="${esc(x.email)}" data-solo-admin>${t("Agregar")}</button>` : ""}</div>`).join("")}</div></div>`;
+}
 function refrescarSeguimiento() {
   // actualización en vivo sin repintar la pantalla (no se pierde lo que se está escribiendo)
-  const R = reparto();
+  const R = reparto(), T = totalesSeg(R);
   P().forEach(p => { const f = $(`[data-seg="${p.id}"]`); if (!f) return; $(".b", f).innerHTML = barraSeg(p, R); $(".e", f).innerHTML = estadoDe(p, R).chip; });
-  const el = $("#totalesSeg"); if (el) el.innerHTML = htmlTotales(totalesSeg(R));
+  const el = $("#totalesSeg"); if (el) el.innerHTML = htmlTotales(T);
+  const sa = $("#sinAsignar"); if (sa) sa.innerHTML = htmlSinAsignar(R, T);
   const v = $("#vivo"); if (v) v.innerHTML = enVivo(R);
   pintarFlujo();
 }
@@ -616,9 +628,32 @@ function bloqueConfig(token) {
   };
   return JSON.stringify({ env }, null, 2);
 }
+function bloqueGemini(token) {
+  return JSON.stringify({ telemetry: {
+    enabled: true, target: "local", otlpEndpoint: URL_INGESTA, otlpProtocol: "http",
+    otlpHeaders: { "x-api-key": token }, logPrompts: false,
+  } }, null, 2);
+}
+function zonas(actual) {
+  let todas = [];
+  try { todas = Intl.supportedValuesOf("timeZone"); } catch (_) { todas = []; }
+  if (!todas.length) todas = ["America/Bogota", "America/Mexico_City", "America/Lima", "America/Santiago", "America/Argentina/Buenos_Aires", "America/New_York", "Europe/Madrid", "UTC"];
+  return todas.includes(actual) ? todas : [actual, ...todas];
+}
+function tarjetaConector(servicio, titulo, texto, ejemplo) {
+  const c = (G.empresa || {})[servicio] || {};
+  return `<div class="tarjeta lista">
+    <div class="cab-conector"><b>${titulo}</b>${c.conectado ? `<span class="chip ok">${t("Conectado")}</span>` : ""}</div>
+    <p class="texto">${texto}</p>
+    ${c.conectado ? `<div class="leyenda-barra" style="color:var(--tx-2)"><span>${t("Clave termina en …{f}", { f: esc(c.fin || "") })}${c.total != null ? ` · ${t("{v} este mes", { v: usd(c.total, 2) })}` : ""}</span><span>${c.revisadoEn ? t("revisada {h}", { h: hace(fechaDe(c.revisadoEn)) }) : ""}</span></div>` : ""}
+    ${c.periodo ? `<small class="tenue">${esc(c.periodo)}</small>` : ""}
+    ${c.error ? `<p class="rojo" style="margin:0;font-size:13.5px">${t("No se pudo leer: {e}", { e: esc(c.error) })}</p>` : ""}
+    ${G.admin ? `<form class="barra-acciones" data-servicio="${servicio}"><label class="campo" style="flex:1;min-width:200px"><input type="password" name="clave" placeholder="${esc(ejemplo)}" autocomplete="off" aria-label="${esc(t("Clave de administración de {s}", { s: titulo }))}"></label><button class="btn" type="submit">${c.conectado ? t("Cambiar") : t("Conectar")}</button>${c.conectado ? `<button class="btn fantasma" type="button" data-accion="sincronizar" data-servicio="${servicio}">${t("Traer ahora")}</button><button class="btn fantasma" type="button" data-accion="desconectar" data-servicio="${servicio}">${t("Quitar")}</button>` : ""}</form>` : ""}
+  </div>`;
+}
 const rolTexto = r => (r === "admin" ? t("Administra") : t("Solo ve"));
 function pantallaAjustes() {
-  const e = G.empresa || {}, an = e.anthropic || {};
+  const e = G.empresa || {};
   const miembros = Object.entries(e.miembros || {}).map(([uid, m]) => ({ uid, ...m }));
   const invitados = Object.values(e.invitados || {});
   const tokens = (G.tokens || []).filter(x => !x.revocado);
@@ -652,12 +687,18 @@ function pantallaAjustes() {
             ` : `<p class="texto">${t("Pídele a un administrador de tu empresa que conecte Claude Code.")}</p>`}
           </div>
         </div>
-        <div class="seccion"><h2>${t("2 · Facturación de Anthropic")} <span class="tenue">${t("opcional")}</span></h2>
-          <div class="tarjeta lista">
-            <p class="texto">${t("Si tu empresa usa la API o la consola de Anthropic, conecta una clave de administración (<code>sk-ant-admin…</code>) y traemos lo facturado cada 3 horas para cuadrarlo con el gasto en vivo. Se guarda cifrada y solo la usa el servidor.")}</p>
-            ${an.conectado ? `<div class="leyenda-barra" style="color:var(--tx-2)"><span>${t("Conectada · termina en …{f}", { f: esc(an.fin || "") })}</span><span>${an.revisadoEn ? t("revisada {h}", { h: hace(fechaDe(an.revisadoEn)) }) : ""}</span></div>` : ""}
-            ${an.error ? `<p class="rojo" style="margin:0;font-size:13.5px">${t("No se pudo leer la facturación: {e}", { e: esc(an.error) })}</p>` : ""}
-            ${G.admin ? `<form class="barra-acciones" id="formAnthropic"><label class="campo" style="flex:1;min-width:220px"><input type="password" name="clave" placeholder="sk-ant-admin…" autocomplete="off" aria-label="${esc(t("Clave de administración de Anthropic"))}"></label><button class="btn" type="submit">${an.conectado ? t("Cambiar") : t("Conectar")}</button>${an.conectado ? `<button class="btn fantasma" type="button" data-accion="sincronizar">${t("Traer ahora")}</button><button class="btn fantasma" type="button" data-accion="desconectarAnthropic">${t("Quitar")}</button>` : ""}</form>` : ""}
+        <div class="seccion"><h2>${t("2 · Otras herramientas")} <span class="tenue">${t("opcional")}</span></h2>
+          <div class="lista">
+            <div class="tarjeta lista">
+              <div class="cab-conector"><b>Gemini CLI</b><span class="chip">${t("en vivo")}</span></div>
+              <p class="texto">${t("Gemini CLI también reporta cada respuesta por telemetría, con el mismo token. No trae el costo: lo calculamos con los precios de lista de Google (supuesto declarado).")}</p>
+              ${G.admin ? `<pre class="codigo" id="configGemini">${esc(bloqueGemini(ejemploToken))}</pre>
+              <div class="barra-acciones"><button class="btn fantasma" data-accion="copiarConfig" data-de="configGemini" ${G.tokenNuevo ? "" : "disabled"}>${t("Copiar configuración")}</button></div>
+              <small class="tenue">${t("Va en <code>~/.gemini/settings.json</code> de cada persona o en la configuración del sistema que reparte TI. Su formato de envío no está documentado: aceptamos JSON y protobuf.")}</small>` : ""}
+            </div>
+            ${tarjetaConector("cursor", "Cursor", t("Con la clave de la Admin API de Cursor (planes Teams y Enterprise) traemos cada hora lo que lleva cada miembro en el ciclo de facturación de Cursor, a precio de lista."), "key_…")}
+            ${tarjetaConector("openai", "OpenAI", t("Con una clave de administración de OpenAI traemos cada hora el costo de la API por usuario (incluye Codex con clave de API). ChatGPT Team o Enterprise no exponen su uso: anótalo a mano."), "sk-admin-…")}
+            ${tarjetaConector("anthropic", t("Facturación de Anthropic"), t("Si tu empresa usa la API o la consola de Anthropic, conecta una clave de administración (<code>sk-ant-admin…</code>) y traemos lo facturado cada 3 horas para cuadrarlo con el gasto en vivo. Se guarda cifrada y solo la usa el servidor."), "sk-ant-admin…")}
           </div>
         </div>
       </div>
@@ -669,6 +710,14 @@ function pantallaAjustes() {
             ${G.admin ? `<form class="barra-acciones" id="formInvitar"><label class="campo" style="flex:1;min-width:200px"><input type="email" name="email" required placeholder="${esc(t("correo@empresa.com"))}" aria-label="${esc(t("Correo de la persona"))}"></label><label class="campo"><select name="rol" aria-label="${esc(t("Permiso"))}"><option value="lector">${t("Solo ve")}</option><option value="admin">${t("Administra")}</option></select></label><button class="btn" type="submit">${t("Invitar")}</button></form>
             <small class="tenue">${t("Entra con Google usando ese correo y queda dentro.")}</small>` : ""}
           </div>
+        </div>
+        <div class="seccion"><h2>${t("Empresa")}</h2>
+          <form class="tarjeta lista" id="formEmpresaDatos">
+            <label class="campo"><span>${t("Nombre de la empresa")}</span><input name="nombre" maxlength="120" value="${esc(e.nombre || "")}" required></label>
+            <label class="campo"><span>${t("Zona horaria")}</span><select name="zona">${zonas(e.zona || zona()).map(z => `<option value="${esc(z)}" ${z === (e.zona || zona()) ? "selected" : ""}>${esc(z.replace(/_/g, " "))}</option>`).join("")}</select></label>
+            <small class="tenue">${t("Decide qué día es «hoy» y a qué hora se cierra el mes: a la medianoche del día 1 en esta zona.")}</small>
+            ${G.admin ? `<div class="barra-acciones"><button class="btn" type="submit">${t("Guardar")}</button></div>` : ""}
+          </form>
         </div>
         <div class="seccion"><h2>${t("Tu cuenta")}</h2>
           <div class="tarjeta lista">
@@ -688,12 +737,20 @@ function montarAjustes() {
     try { await accion("invitarMiembro", { org: G.org, email: f.get("email"), rol: f.get("rol") }); aviso(t("Invitación lista.")); fi.reset(); }
     catch (err) { aviso(t(err.message), true); }
   });
-  const fa = $("#formAnthropic");
-  if (fa) fa.addEventListener("submit", async e => {
+  $$("form[data-servicio]").forEach(fa => fa.addEventListener("submit", async e => {
     e.preventDefault();
     const clave = new FormData(fa).get("clave");
     if (!clave) return;
-    try { await accion("guardarClaveAnthropic", { org: G.org, clave }); aviso(t("Clave guardada. Trayendo la facturación…")); fa.reset(); }
+    const b = fa.querySelector("button[type=submit]"); b.disabled = true;
+    try { await accion("guardarClave", { org: G.org, servicio: fa.dataset.servicio, clave }); aviso(t("Clave guardada. Trayendo el gasto…")); fa.reset(); }
+    catch (err) { aviso(t(err.message), true); }
+    finally { b.disabled = false; }
+  }));
+  const fe = $("#formEmpresaDatos");
+  if (fe) fe.addEventListener("submit", async e => {
+    e.preventDefault();
+    const f = new FormData(fe);
+    try { await accion("actualizarEmpresa", { org: G.org, nombre: f.get("nombre"), zona: f.get("zona") }); aviso(t("Empresa actualizada.")); }
     catch (err) { aviso(t(err.message), true); }
   });
   const ce = $("#cambiarEmpresa");
@@ -917,12 +974,14 @@ document.addEventListener("click", async e => {
     try { G.tokenNuevo = await accion("crearToken", { org: G.org, nombre: "Claude Code de la empresa" }); render(false); aviso(t("Token creado. Cópialo ahora.")); }
     catch (err) { aviso(t(err.message), true); b.disabled = false; }
   } else if (a === "copiarConfig") {
-    try { await navigator.clipboard.writeText($("#config").textContent); aviso(t("Configuración copiada.")); } catch (_) { aviso(t("Selecciona el texto y cópialo."), true); }
+    try { await navigator.clipboard.writeText($(`#${b.dataset.de || "config"}`).textContent); aviso(t("Configuración copiada.")); } catch (_) { aviso(t("Selecciona el texto y cópialo."), true); }
   } else if (a === "sincronizar") {
-    try { const r = await accion("sincronizarAnthropic", { org: G.org }); aviso(r.ok ? t("Facturación actualizada.") : t("No se pudo traer la facturación."), !r.ok); }
+    b.disabled = true;
+    try { const r = await accion("sincronizar", { org: G.org, servicio: b.dataset.servicio }); aviso(r.ok ? t("Gasto actualizado.") : t("No se pudo traer el gasto."), !r.ok); }
     catch (err) { aviso(t(err.message), true); }
-  } else if (a === "desconectarAnthropic") {
-    try { await accion("guardarClaveAnthropic", { org: G.org, clave: "" }); aviso(t("Se quitó la clave de Anthropic.")); }
+    finally { b.disabled = false; }
+  } else if (a === "desconectar") {
+    try { await accion("guardarClave", { org: G.org, servicio: b.dataset.servicio, clave: "" }); aviso(t("Se quitó la clave.")); }
     catch (err) { aviso(t(err.message), true); }
   }
 });

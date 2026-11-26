@@ -59,6 +59,9 @@ class RepoConsumo(Protocol):
     def gasto_de(self, org: str, mes: str) -> dict[str, dict]: ...
     def crear_alerta(self, org: str, id_: str, datos: dict) -> bool: ...
     def guardar_gasto_api(self, org: str, mes: str, datos: dict) -> None: ...
+    def guardar_externo(self, org: str, mes: str, herramienta: str, filas: dict[str, dict]) -> None:
+        """Monto acumulado del mes por persona leído de Cursor u OpenAI: {clave: {email, usd}}."""
+        ...
 
 
 class Reloj(Protocol):
@@ -68,6 +71,14 @@ class Reloj(Protocol):
 class Cifrador(Protocol):
     def cifrar(self, texto: str) -> str: ...
     def descifrar(self, cifrado: str) -> str: ...
+
+
+class FuenteGasto(Protocol):
+    """API de administración de otra herramienta (Cursor, OpenAI)."""
+
+    def gasto_por_persona(self, clave_admin: str, desde: datetime, hasta: datetime) -> dict:
+        """{'filas': [{'email', 'usuario', 'usd'}], 'periodo': texto}"""
+        ...
 
 
 class FuenteCostosAnthropic(Protocol):

@@ -34,3 +34,9 @@ def cifrador():
 
 def fuente_anthropic():
     return CostosAnthropic()
+
+
+def fuente_gasto(servicio: str):
+    from infraestructura.externos import GastoCursor, GastoOpenAI
+
+    return {"cursor": GastoCursor, "openai": GastoOpenAI}[servicio]()

@@ -1,8 +1,12 @@
-"""Consumo real de IA: qué gastó cada persona, a partir de lo que reporta Claude Code.
+"""Consumo real de IA: qué gastó cada persona, a partir de lo que reportan las herramientas.
 
-Claude Code exporta un evento `claude_code.api_request` por cada llamada al modelo, con su
-costo en USD, los tokens, el modelo y el correo de quien lo usó (telemetría OpenTelemetry,
-formato OTLP/JSON). Aquí solo se interpreta ese formato: nada de red ni de base de datos.
+- Claude Code exporta un evento `claude_code.api_request` por cada llamada, con su costo en USD.
+- Gemini CLI exporta `gemini_cli.api_response` con los tokens (sin costo): se calcula con
+  los precios declarados en `precios.py`.
+Los dos llegan por telemetría OpenTelemetry (OTLP, JSON o protobuf ya convertido a JSON).
+Cursor y OpenAI se leen de sus APIs de administración (ver `aplicacion/ingesta.py`): son
+montos acumulados del mes que se guardan aparte, en `externo`.
+Aquí solo se interpreta el formato: nada de red ni de base de datos.
 """
 
 from __future__ import annotations
@@ -13,7 +17,11 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
+from .precios import costo_gemini
+
 NOMBRES_EVENTO = {"api_request", "claude_code.api_request"}
+NOMBRES_GEMINI = {"gemini_cli.api_response", "api_response"}
+HERRAMIENTAS_EXTERNAS = ("cursor", "openai")
 TIPOS_TOKEN = {
     "input_tokens": "entrada",
     "output_tokens": "salida",
@@ -32,7 +40,11 @@ class EventoConsumo:
     email: str | None = None
     sesion: str | None = None
     tokens: dict[str, int] = field(default_factory=dict)
-    origen: str = "claude_code"
+    origen: str = "claude_code"  # claude_code | gemini_cli
+
+    @property
+    def herramienta(self) -> str:
+        return "gemini" if self.origen == "gemini_cli" else "claude"
 
 
 # ---------------------------------------------------------------- formato OTLP/JSON
@@ -90,8 +102,48 @@ def _numero(x) -> float:
     return v if v == v and v >= 0 else 0.0  # descarta NaN y negativos
 
 
+def _correo(attrs: dict) -> str | None:
+    email = attrs.get("user.email")
+    return email.strip().lower() if isinstance(email, str) and email.strip() else None
+
+
+def _huella(*partes) -> str:
+    """Identificador estable cuando el evento no trae uno: un reintento del exportador da el mismo."""
+    return "h" + hashlib.sha256("|".join(str(p) for p in partes).encode()).hexdigest()[:24]
+
+
+def _evento_claude(reg: dict, attrs: dict) -> EventoConsumo:
+    if attrs.get("cost_usd") is not None:
+        usd = _numero(attrs.get("cost_usd"))
+    else:
+        usd = _numero(attrs.get("cost_usd_micros")) / 1e6
+    tokens = {destino: int(_numero(attrs.get(origen))) for origen, destino in TIPOS_TOKEN.items()
+              if attrs.get(origen) is not None}
+    momento = _momento(reg, attrs)
+    id_ = attrs.get("request_id") or attrs.get("client_request_id") or _huella(
+        attrs.get("session.id"), attrs.get("event.sequence"), momento.isoformat(), usd)
+    return EventoConsumo(id=str(id_)[:128], usd=usd, modelo=str(attrs.get("model") or "desconocido"),
+                         momento=momento, email=_correo(attrs), sesion=attrs.get("session.id"), tokens=tokens)
+
+
+def _evento_gemini(reg: dict, attrs: dict) -> EventoConsumo:
+    modelo = str(attrs.get("model") or "desconocido")
+    entrada = int(_numero(attrs.get("input_token_count")))
+    salida = int(_numero(attrs.get("output_token_count")))
+    cache = int(_numero(attrs.get("cached_content_token_count")))
+    pensamiento = int(_numero(attrs.get("thoughts_token_count")))
+    momento = _momento(reg, attrs)
+    id_ = attrs.get("response_id") or _huella(
+        "gemini", attrs.get("session.id"), attrs.get("prompt_id"), reg.get("timeUnixNano"),
+        attrs.get("event.timestamp"), entrada, salida, cache, pensamiento)
+    tokens = {"entrada": entrada, "salida": salida, "cacheLeida": cache, "pensamiento": pensamiento}
+    return EventoConsumo(id=str(id_)[:128], usd=costo_gemini(modelo, entrada, salida, cache, pensamiento),
+                         modelo=modelo, momento=momento, email=_correo(attrs), sesion=attrs.get("session.id"),
+                         tokens={k: v for k, v in tokens.items() if v}, origen="gemini_cli")
+
+
 def eventos_desde_otlp(carga: dict) -> list[EventoConsumo]:
-    """Saca los eventos de costo de un lote OTLP/JSON de logs. Ignora todo lo demás."""
+    """Saca los eventos de costo de un lote OTLP de logs (Claude Code y Gemini CLI). Ignora lo demás."""
     eventos = []
     for rl in (carga or {}).get("resourceLogs", []) or []:
         recurso = _atributos((rl.get("resource") or {}).get("attributes"))
@@ -100,26 +152,17 @@ def eventos_desde_otlp(carga: dict) -> list[EventoConsumo]:
                 attrs = {**recurso, **_atributos(reg.get("attributes"))}
                 cuerpo = _valor(reg.get("body") or {})
                 nombre = attrs.get("event.name") or cuerpo
-                if nombre not in NOMBRES_EVENTO:
-                    continue
-                if attrs.get("cost_usd") is not None:
-                    usd = _numero(attrs.get("cost_usd"))
-                else:
-                    usd = _numero(attrs.get("cost_usd_micros")) / 1e6
-                tokens = {destino: int(_numero(attrs.get(origen))) for origen, destino in TIPOS_TOKEN.items()
-                          if attrs.get(origen) is not None}
-                momento = _momento(reg, attrs)
-                email = attrs.get("user.email")
-                id_ = attrs.get("request_id") or attrs.get("client_request_id")
-                if not id_:  # sin identificador: huella estable del registro para no contarlo dos veces
-                    base = f"{attrs.get('session.id')}|{attrs.get('event.sequence')}|{momento.isoformat()}|{usd}"
-                    id_ = "h" + hashlib.sha256(base.encode()).hexdigest()[:24]
-                eventos.append(EventoConsumo(
-                    id=str(id_)[:128], usd=usd, modelo=str(attrs.get("model") or "desconocido"),
-                    momento=momento, email=email.strip().lower() if isinstance(email, str) and email.strip() else None,
-                    sesion=attrs.get("session.id"), tokens=tokens,
-                ))
+                if nombre in NOMBRES_EVENTO:
+                    eventos.append(_evento_claude(reg, attrs))
+                elif nombre in NOMBRES_GEMINI or (isinstance(cuerpo, str) and cuerpo in NOMBRES_GEMINI):
+                    eventos.append(_evento_gemini(reg, attrs))
     return eventos
+
+
+def total_fila(fila: dict) -> float:
+    """USD de una persona en el mes: telemetría (Claude, Gemini) más lo leído de Cursor y OpenAI."""
+    externo = fila.get("externo") or {}
+    return float(fila.get("usd", 0) or 0) + sum(float(externo.get(h, 0) or 0) for h in HERRAMIENTAS_EXTERNAS)
 
 
 # ---------------------------------------------------------------- reglas del negocio
@@ -167,5 +210,5 @@ def repartir(personas: list[dict], gasto_mes: dict[str, dict]) -> dict[str, floa
     for clave, fila in (gasto_mes or {}).items():
         duenio = clave if clave in ids else por_correo.get(str(fila.get("email") or "").lower())
         if duenio:
-            out[duenio] = out.get(duenio, 0.0) + float(fila.get("usd", 0) or 0)
+            out[duenio] = out.get(duenio, 0.0) + total_fila(fila)
     return out

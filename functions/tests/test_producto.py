@@ -126,6 +126,11 @@ class Memoria:
     def guardar_gasto_api(self, o, mes, d):
         self.api[(o, mes)] = d
 
+    def guardar_externo(self, o, mes, herramienta, filas):
+        for clave, f in filas.items():
+            g = self.gasto[(o, mes)].setdefault(clave, {"usd": 0.0, "porDia": defaultdict(float), "email": f.get("email")})
+            g.setdefault("externo", {})[herramienta] = f["usd"]
+
 
 def otlp(*registros, recurso=None):
     def attrs(d):
@@ -323,3 +328,135 @@ def test_gasto_previo_de_un_correo_pasa_a_la_persona_al_agregarla(mundo):
     planes.recalcular(m, reloj, org, caso)
     h = planes.cerrar(m, m, reloj, org)
     assert h["porPersona"]["p99"] == 30.0
+
+
+# ---------------------------------------------------------------- otras herramientas
+from dominio.cierre import meses_por_cerrar, zona_valida  # noqa: E402
+from dominio.consumo import repartir, total_fila  # noqa: E402
+from dominio.precios import costo_gemini, precio_gemini  # noqa: E402
+
+
+def gemini(**extra):
+    reg = {"event.name": "gemini_cli.api_response", "model": "gemini-2.5-pro", "input_token_count": 1_000_000,
+           "output_token_count": 100_000, "cached_content_token_count": 200_000, "thoughts_token_count": 50_000,
+           "prompt_id": "p1", "session.id": "s1", **extra}
+    return otlp(reg, recurso={"service.name": "gemini-cli", "user.email": "Carla@Empresa.co"})
+
+
+def test_gemini_cli_se_lee_y_se_le_calcula_el_costo():
+    e = eventos_desde_otlp(gemini())[0]
+    # (1M - 200k) × 1,25 + 200k × 0,125 + (100k + 50k) × 10, por millón
+    assert e.origen == "gemini_cli" and e.herramienta == "gemini" and e.email == "carla@empresa.co"
+    assert e.usd == pytest.approx(1.0 + 0.025 + 1.5)
+    assert eventos_desde_otlp(gemini())[0].id == e.id  # un reintento no se cuenta dos veces
+
+
+def test_modelo_gemini_desconocido_no_subestima():
+    (pin, pout, _), conocido = precio_gemini("gemini-9-ultra")
+    assert not conocido and pin >= 2.0 and pout >= 12.0
+    assert costo_gemini("gemini-2.5-flash", 1_000_000, 0) == pytest.approx(0.30)
+
+
+def test_protobuf_da_lo_mismo_que_json():
+    from opentelemetry.proto.collector.logs.v1.logs_service_pb2 import ExportLogsServiceRequest
+
+    from interfaz.http import _logs_desde_protobuf
+
+    req = ExportLogsServiceRequest()
+    lr = req.resource_logs.add().scope_logs.add().log_records.add()
+    lr.time_unix_nano = 1763650800000000000
+    for k, v in {"event.name": "api_request", "request_id": "pb1", "user.email": "ana@empresa.co"}.items():
+        a = lr.attributes.add(); a.key = k; a.value.string_value = v
+    a = lr.attributes.add(); a.key = "cost_usd"; a.value.double_value = 0.75
+    e = eventos_desde_otlp(_logs_desde_protobuf(req.SerializeToString()))[0]
+    assert (e.id, e.usd, e.email) == ("pb1", 0.75, "ana@empresa.co")
+
+
+def test_total_suma_telemetria_y_herramientas_externas():
+    fila = {"usd": 10.0, "externo": {"cursor": 5.5, "openai": 2.0}}
+    assert total_fila(fila) == 17.5
+    assert repartir([{"id": "p1", "email": "a@b.co"}], {"correo-x": {"email": "a@b.co", **fila}}) == {"p1": 17.5}
+
+
+class FuenteTabla:
+    def __init__(self, filas):
+        self.filas, self.llamadas = filas, 0
+
+    def gasto_por_persona(self, clave, desde, hasta):
+        self.llamadas += 1
+        assert clave == "clave-cursor-1234567890" and desde < hasta
+        return {"filas": self.filas, "periodo": "ciclo"}
+
+
+def test_sincronizar_cursor_reemplaza_y_no_suma_de_mas(mundo):
+    m, reloj, org = mundo
+    organizaciones.guardar_clave(m, Cifrador(), org, "u1", "cursor", "clave-cursor-1234567890")
+    f = FuenteTabla([{"email": "ana@empresa.co", "usuario": "user_1", "usd": 200.0},
+                     {"email": "otra@empresa.co", "usuario": "user_2", "usd": 9.0}])
+    ingesta.sincronizar_fuente(m, m, m, reloj, Cifrador(), f, org, "cursor")
+    ingesta.sincronizar_fuente(m, m, m, reloj, Cifrador(), f, org, "cursor")  # la hora siguiente
+    assert repartir(m.leer_caso(org)["personas"], m.gasto_de(org, "2026-11"))["p1"] == 200.0
+    assert m.leer(org)["cursor"]["total"] == 209.0 and not m.leer(org)["cursor"]["error"]
+    # Claude + Cursor juntos cruzan el 80 % del tope de Ana (360)
+    ingesta.registrar(m, m, m, reloj, org, [EventoConsumo("c9", 100.0, "x", reloj.t, "ana@empresa.co")])
+    assert any(a["nivel"] == 80 for a in m.alertas.values())
+
+
+def test_error_de_la_fuente_queda_en_la_empresa(mundo):
+    m, reloj, org = mundo
+    organizaciones.guardar_clave(m, Cifrador(), org, "u1", "openai", "sk-admin-abcdefghijklmnop")
+
+    class Rota:
+        def gasto_por_persona(self, *a):
+            raise RuntimeError("HTTP 401: clave inválida")
+
+    assert ingesta.sincronizar_fuente(m, m, m, reloj, Cifrador(), Rota(), org, "openai") is None
+    assert "401" in m.leer(org)["openai"]["error"]
+    with pytest.raises(DatosInvalidos):
+        organizaciones.guardar_clave(m, Cifrador(), org, "u1", "openai", "no-es-clave")
+
+
+def test_cierre_segun_la_zona_de_cada_empresa():
+    # 1 de diciembre 03:00 UTC: en Madrid ya es diciembre; en Bogotá todavía es 30 de noviembre
+    ahora = datetime(2026, 12, 1, 3, tzinfo=timezone.utc)
+    assert meses_por_cerrar("2026-11", ahora, "Europe/Madrid") == ["2026-11"]
+    assert meses_por_cerrar("2026-11", ahora, "America/Bogota") == []
+    assert meses_por_cerrar("2026-11", datetime(2026, 12, 1, 5, 5, tzinfo=timezone.utc), "America/Bogota") == ["2026-11"]
+    assert meses_por_cerrar("2026-09", ahora, "Asia/Tokyo") == ["2026-09", "2026-10", "2026-11"]
+    assert zona_valida("Marte/Olympus") == "America/Bogota"
+
+
+def test_cambiar_zona_horaria(mundo):
+    m, _, org = mundo
+    organizaciones.actualizar_empresa(m, org, "u1", None, "Europe/Madrid")
+    assert m.leer(org)["zona"] == "Europe/Madrid"
+    with pytest.raises(DatosInvalidos):
+        organizaciones.actualizar_empresa(m, org, "u1", None, "Marte/Olympus")
+    with pytest.raises(NoAutorizado):
+        organizaciones.actualizar_empresa(m, org, "intruso", "X", None)
+
+
+def test_adaptadores_de_cursor_y_openai(monkeypatch):
+    from infraestructura import externos
+
+    pedidos = []
+
+    def falso(url, cab, cuerpo=None, metodo="GET", tiempo=30.0):
+        pedidos.append((url, cab, cuerpo, metodo))
+        if "cursor" in url:
+            return {"teamMemberSpend": [{"email": "Ana@Empresa.co", "userId": "user_1", "overallSpendCents": 12345.5,
+                                         "spendCents": 100}], "totalPages": 1, "subscriptionCycleStart": 1762000000000}
+        if "/costs" in url:
+            return {"data": [{"results": [{"amount": {"value": 4.5, "currency": "usd"}, "user_id": "user-a"}]},
+                             {"results": [{"amount": {"value": 1.5, "currency": "usd"}, "user_id": "user-a"}]}],
+                    "has_more": False}
+        return {"data": [{"id": "user-a", "email": "Luis@Empresa.co"}], "has_more": False}
+
+    monkeypatch.setattr(externos, "_pedir", falso)
+    d, h = datetime(2026, 11, 1, tzinfo=timezone.utc), datetime(2026, 11, 20, tzinfo=timezone.utc)
+    c = externos.GastoCursor().gasto_por_persona("key_abc", d, h)
+    assert c["filas"] == [{"email": "ana@empresa.co", "usuario": "user_1", "usd": 123.455}]
+    assert pedidos[0][1]["Authorization"].startswith("Basic ") and pedidos[0][3] == "POST"
+    o = externos.GastoOpenAI().gasto_por_persona("sk-admin-x", d, h)
+    assert o["filas"] == [{"email": "luis@empresa.co", "usuario": "user-a", "usd": 6.0}]
+    assert "group_by=user_id" in pedidos[1][0] and pedidos[1][1]["Authorization"] == "Bearer sk-admin-x"

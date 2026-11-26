@@ -45,21 +45,35 @@ def _revocar_token(s: Sesion, d: dict):
     return {"ok": True}
 
 
-def _clave_anthropic(s: Sesion, d: dict):
+def sincronizar_servicio(org: str, servicio: str):
+    """Trae ya mismo lo de un servicio conectado (lo usan el panel y la tarea programada)."""
     r = contexto.repo()
-    estado = organizaciones.guardar_clave_anthropic(r, contexto.cifrador(), d.get("org", ""), s.uid, d.get("clave"))
+    if servicio == "anthropic":
+        return ingesta.sincronizar_anthropic(r, r, r, contexto.reloj(), contexto.cifrador(),
+                                             contexto.fuente_anthropic(), org)
+    return ingesta.sincronizar_fuente(r, r, r, contexto.reloj(), contexto.cifrador(),
+                                      contexto.fuente_gasto(servicio), org, servicio)
+
+
+def _guardar_clave(s: Sesion, d: dict):
+    servicio = d.get("servicio") or "anthropic"
+    estado = organizaciones.guardar_clave(contexto.repo(), contexto.cifrador(), d.get("org", ""), s.uid, servicio,
+                                          d.get("clave"))
     if estado.get("conectado"):
-        ingesta.sincronizar_anthropic(r, r, r, contexto.reloj(), contexto.cifrador(), contexto.fuente_anthropic(),
-                                      d["org"])
+        sincronizar_servicio(d["org"], servicio)
     return estado
 
 
 def _sincronizar(s: Sesion, d: dict):
-    r = contexto.repo()
-    organizaciones.exigir(r, d.get("org", ""), s.uid, "admin")
-    datos = ingesta.sincronizar_anthropic(r, r, r, contexto.reloj(), contexto.cifrador(),
-                                          contexto.fuente_anthropic(), d["org"])
-    return {"ok": datos is not None}
+    organizaciones.exigir(contexto.repo(), d.get("org", ""), s.uid, "admin")
+    servicio = d.get("servicio") or "anthropic"
+    if servicio not in organizaciones.SERVICIOS:
+        raise DatosInvalidos("Servicio desconocido.")
+    return {"ok": sincronizar_servicio(d["org"], servicio) is not None}
+
+
+def _actualizar_empresa(s: Sesion, d: dict):
+    return organizaciones.actualizar_empresa(contexto.repo(), d.get("org", ""), s.uid, d.get("nombre"), d.get("zona"))
 
 
 def _cerrar_mes(s: Sesion, d: dict):
@@ -91,8 +105,11 @@ ACCIONES = {
     "quitarMiembro": _quitar,
     "crearToken": _crear_token,
     "revocarToken": _revocar_token,
-    "guardarClaveAnthropic": _clave_anthropic,
+    "guardarClave": _guardar_clave,
+    "guardarClaveAnthropic": _guardar_clave,  # compatibilidad: sin `servicio` es Anthropic
+    "sincronizar": _sincronizar,
     "sincronizarAnthropic": _sincronizar,
+    "actualizarEmpresa": _actualizar_empresa,
     "cerrarMes": _cerrar_mes,
     "exportarExcel": _excel,
 }

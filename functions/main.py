@@ -64,37 +64,39 @@ def recalcular_plan(event: firestore_fn.Event[firestore_fn.Change[firestore_fn.D
     planes.recalcular(r, contexto.reloj(), event.params["org"], despues.to_dict())
 
 
-@scheduler_fn.on_schedule(schedule="5 0 1 * *", timezone=scheduler_fn.Timezone("America/Bogota"),
-                          memory=options.MemoryOption.GB_1, timeout_sec=540)
+@scheduler_fn.on_schedule(schedule="5 * * * *", memory=options.MemoryOption.GB_1, timeout_sec=540)
 def cierre_mensual(event: scheduler_fn.ScheduledEvent) -> None:
-    """El día 1 cierra el mes anterior de cada empresa y deja listo el plan del nuevo."""
+    """Cada hora: cierra el mes de las empresas en las que, en SU zona horaria, ya empezó el siguiente.
+
+    Cierra un mes por empresa y por ejecución: el plan del mes nuevo lo recalcula el disparador, y
+    si quedaron varios meses atrasados se ponen al día en las horas siguientes.
+    """
     from aplicacion import planes
-    from dominio.cierre import siguiente_mes
+    from dominio.cierre import meses_por_cerrar
 
     r = contexto.repo()
     ahora = contexto.reloj().ahora()
     for org in r.ids():
-        seg = r.leer_seguimiento(org) or {}
-        mes = seg.get("mes")
-        # cierra todo mes anterior al actual (por si un cierre falló antes)
-        while mes and siguiente_mes(mes) <= f"{ahora.year}-{ahora.month:02d}":
-            try:
-                if not planes.cerrar(r, r, contexto.reloj(), org, mes):
-                    break
-            except Exception as e:  # una empresa con datos rotos no frena a las demás
-                print(f"cierre_mensual: {org} {mes}: {e}")
-                break
-            mes = siguiente_mes(mes)
+        try:
+            seg = r.leer_seguimiento(org) or {}
+            pendientes = meses_por_cerrar(seg.get("mes"), ahora, (r.leer(org) or {}).get("zona"))
+            if pendientes:
+                planes.cerrar(r, r, contexto.reloj(), org, pendientes[0])
+        except Exception as e:  # una empresa con datos rotos no frena a las demás
+            print(f"cierre_mensual: {org}: {e}")
 
 
-@scheduler_fn.on_schedule(schedule="every 3 hours", memory=options.MemoryOption.MB_512, timeout_sec=540,
+@scheduler_fn.on_schedule(schedule="20 * * * *", memory=options.MemoryOption.MB_512, timeout_sec=540,
                           secrets=[CLAVE_CIFRADO])
-def conciliar_anthropic(event: scheduler_fn.ScheduledEvent) -> None:
-    """Trae lo facturado por Anthropic de las empresas que conectaron su clave de administración."""
-    from aplicacion import ingesta as casos
-
+def sincronizar_fuentes(event: scheduler_fn.ScheduledEvent) -> None:
+    """Cada hora trae el gasto de Cursor y OpenAI; cada 3 horas, lo facturado por Anthropic."""
     r = contexto.repo()
+    cada_3h = contexto.reloj().ahora().hour % 3 == 0
     for org in r.ids():
         datos = r.leer(org) or {}
-        if (datos.get("anthropic") or {}).get("conectado"):
-            casos.sincronizar_anthropic(r, r, r, contexto.reloj(), contexto.cifrador(), contexto.fuente_anthropic(), org)
+        for servicio in ("cursor", "openai") + (("anthropic",) if cada_3h else ()):
+            if (datos.get(servicio) or {}).get("conectado"):
+                try:
+                    acciones.sincronizar_servicio(org, servicio)
+                except Exception as e:
+                    print(f"sincronizar_fuentes: {org} {servicio}: {e}")

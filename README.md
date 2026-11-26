@@ -24,7 +24,7 @@ functions/                    backend (Cloud Functions, Python 3.13)
   aplicacion/                 casos de uso: empresas, planes, ingesta, cierre, conciliación
   dominio/                    programación lineal y reglas del negocio, sin red ni base de datos
   infraestructura/            Firestore, API de costos de Anthropic, cifrado, Excel
-  tests/                      116 pruebas (motor matemático + casos de uso con repos en memoria)
+  tests/                      125 pruebas (motor matemático + casos de uso con repos en memoria)
 firestore.rules               miembros leen; admins editan datos; el resto lo escribe solo el servidor
 ```
 
@@ -35,12 +35,25 @@ las pruebas corren sin Firebase.
 
 | Función | Tipo | Qué hace |
 | --- | --- | --- |
-| `ingesta` | HTTP (`/otlp/v1/logs`) | Recibe la telemetría OTLP/JSON de Claude Code, suma el costo de cada evento `claude_code.api_request` una sola vez y levanta alertas al 80 % y 100 % del tope |
+| `ingesta` | HTTP (`/otlp`, `/otlp/**`) | Telemetría OTLP (JSON o protobuf) de Claude Code (`claude_code.api_request`, trae `cost_usd`) y Gemini CLI (`gemini_cli.api_response`, el costo se calcula con `dominio/precios.py`); suma cada evento una sola vez y levanta alertas al 80 % y 100 % del tope |
 | `recalcular_plan` | Firestore | Cada vez que cambia `estado/caso`, resuelve el ciclo y guarda el plan |
-| `app` | Invocable | Acciones del panel: crear empresa, invitar, tokens, clave de Anthropic, cerrar mes, Excel |
-| `cierre_mensual` | Programada (día 1, 00:05 Bogotá) | Cierra el mes: el gasto real pasa a ser el «mes pasado» y se calcula el plan nuevo |
-| `conciliar_anthropic` | Programada (cada 3 h) | Trae lo facturado de la Usage and Cost Analytics API de Anthropic (opcional) |
+| `app` | Invocable | Acciones del panel: crear empresa, invitar, tokens, claves de Cursor/OpenAI/Anthropic, nombre y zona horaria, cerrar mes, Excel |
+| `cierre_mensual` | Programada (cada hora) | Cierra el mes de cada empresa cuando en SU zona horaria ya es día 1; el gasto real pasa a ser el «mes pasado» |
+| `sincronizar_fuentes` | Programada (cada hora) | Cursor (Admin API, `POST /teams/spend`) y OpenAI (`/v1/organization/costs` por usuario) cada hora; facturación de Anthropic cada 3 h |
 | `api` | HTTP (`/api/**`) | Cálculo público sin cuenta (vista de clase) |
+
+### Fuentes de gasto
+
+| Herramienta | Cómo llega | Cada cuánto |
+| --- | --- | --- |
+| Claude Code | Telemetría con token de la empresa; costo exacto por llamada | En vivo (segundos) |
+| Gemini CLI | Telemetría con el mismo token; costo calculado con precios de lista (supuesto declarado) | En vivo |
+| Cursor | Admin API con clave de administración (planes Teams/Enterprise); uso del ciclo de Cursor | Cada hora |
+| OpenAI | Costs API de la organización por usuario (incluye Codex con clave de API) | Cada hora |
+| Anthropic (API/consola) | Usage and Cost Analytics API; solo para cuadrar la factura, no se suma | Cada 3 horas |
+| ChatGPT, Copilot y otras | A mano en Seguimiento | — |
+
+Las claves de administración se guardan cifradas (Fernet, llave en Secret Manager) y solo las usa el servidor.
 
 ### Conectar Claude Code (lo hace TI una vez)
 
@@ -72,7 +85,7 @@ firebase emulators:start --project gasto-ia-bajo-control
 ```
 
 Abrir <http://localhost:5100>. En localhost la web usa los emuladores (Auth 9199, Firestore 8181,
-Functions 5101, Hosting 5100, UI 4100). Pruebas: `functions/venv/bin/python -m pytest -q functions/tests`.
+Functions 5101, Hosting 5100, UI 4100). Pruebas: `cd functions && venv/bin/python -m pytest -q tests`.
 
 ## Desplegar
 

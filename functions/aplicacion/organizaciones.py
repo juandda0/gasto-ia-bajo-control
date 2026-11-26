@@ -135,18 +135,56 @@ def autorizar_token(repo: RepoOrganizaciones, token: str | None) -> str:
     return datos["org"]
 
 
-def guardar_clave_anthropic(repo: RepoOrganizaciones, cifrador: Cifrador, org_id: str, uid: str,
-                            clave: str | None) -> dict:
-    """Guarda (cifrada) la clave de administración de Anthropic, o la borra si viene vacía."""
+# Servicios cuya clave de administración guarda la empresa: (campo en la empresa, validación, mensaje)
+SERVICIOS = {
+    "anthropic": ("anthropic", lambda c: c.startswith("sk-ant-admin"),
+                  "Usa una clave de administración (empieza por sk-ant-admin)."),
+    "openai": ("openai", lambda c: c.startswith("sk-") and len(c) >= 20,
+               "Usa una clave de administración de OpenAI (empieza por sk-)."),
+    "cursor": ("cursor", lambda c: len(c) >= 16 and " " not in c,
+               "Esa clave de Cursor no parece válida."),
+}
+
+
+def guardar_clave(repo: RepoOrganizaciones, cifrador: Cifrador, org_id: str, uid: str, servicio: str,
+                  clave: str | None) -> dict:
+    """Guarda (cifrada) la clave de administración de un servicio, o la borra si viene vacía."""
     exigir(repo, org_id, uid, "admin")
+    if servicio not in SERVICIOS:
+        raise DatosInvalidos("Servicio desconocido.")
+    campo, valida, mensaje = SERVICIOS[servicio]
     clave = (clave or "").strip()
     if not clave:
-        repo.guardar_secreto(org_id, "anthropic_admin", None)
-        repo.actualizar(org_id, {"anthropic": {"conectado": False}})
+        repo.guardar_secreto(org_id, f"{servicio}_admin", None)
+        repo.actualizar(org_id, {campo: {"conectado": False}})
         return {"conectado": False}
-    if not clave.startswith("sk-ant-admin"):
-        raise DatosInvalidos("Usa una clave de administración (empieza por sk-ant-admin).")
-    repo.guardar_secreto(org_id, "anthropic_admin", cifrador.cifrar(clave))
+    if not valida(clave) or len(clave) > 400:
+        raise DatosInvalidos(mensaje)
+    repo.guardar_secreto(org_id, f"{servicio}_admin", cifrador.cifrar(clave))
     estado = {"conectado": True, "fin": clave[-4:]}
-    repo.actualizar(org_id, {"anthropic": estado})
+    repo.actualizar(org_id, {campo: estado})
     return estado
+
+
+def guardar_clave_anthropic(repo, cifrador, org_id, uid, clave):
+    return guardar_clave(repo, cifrador, org_id, uid, "anthropic", clave)
+
+
+def actualizar_empresa(repo: RepoOrganizaciones, org_id: str, uid: str, nombre: str | None, zona: str | None) -> dict:
+    """Nombre y zona horaria (la zona decide a qué hora local se cierra el mes y qué día es «hoy»)."""
+    from dominio.cierre import zona_valida
+
+    exigir(repo, org_id, uid, "admin")
+    cambios = {}
+    if nombre is not None:
+        nombre = nombre.strip()[:120]
+        if not nombre:
+            raise DatosInvalidos("Ponle un nombre a la empresa.")
+        cambios["nombre"] = nombre
+    if zona is not None:
+        if zona_valida(zona) != zona:
+            raise DatosInvalidos("Zona horaria desconocida.")
+        cambios["zona"] = zona
+    if cambios:
+        repo.actualizar(org_id, cambios)
+    return cambios

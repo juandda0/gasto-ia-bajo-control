@@ -32,10 +32,12 @@ def _incrementos(eventos: list[tuple[EventoConsumo, str]]) -> dict:
     usd = sum(e.usd for e, _ in eventos)
     por_dia: dict[str, float] = defaultdict(float)
     por_modelo: dict[str, float] = defaultdict(float)
+    por_herramienta: dict[str, float] = defaultdict(float)
     tokens: dict[str, int] = defaultdict(int)
     for e, dia in eventos:
         por_dia[dia] += e.usd
         por_modelo[clave_segura(e.modelo)] += e.usd
+        por_herramienta[e.herramienta] += e.usd
         for t, n in e.tokens.items():
             tokens[t] += n
     ultimo = max(e.momento for e, _ in eventos)
@@ -45,6 +47,7 @@ def _incrementos(eventos: list[tuple[EventoConsumo, str]]) -> dict:
         "eventos": gfs.Increment(len(eventos)),
         "porDia": {d: gfs.Increment(v) for d, v in por_dia.items()},
         "porModelo": {m: gfs.Increment(v) for m, v in por_modelo.items()},
+        "porHerramienta": {h: gfs.Increment(v) for h, v in por_herramienta.items()},
         "tokens": {t: gfs.Increment(n) for t, n in tokens.items()},
         "ultimo": ultimo,
     }
@@ -194,6 +197,21 @@ class Firestore:
             return True
         except (gexc.Conflict, gexc.AlreadyExists):
             return False
+
+    def guardar_externo(self, org: str, mes: str, herramienta: str, filas: dict[str, dict]) -> None:
+        """Reemplaza el acumulado del mes de una herramienta en la ficha de cada persona."""
+        claves = list(filas.items())
+        for i in range(0, len(claves), 400):
+            lote = self.db.batch()
+            for clave, f in claves[i:i + 400]:
+                datos = {"clave": clave, "externo": {herramienta: round(float(f["usd"]), 4)},
+                         "externoEn": gfs.SERVER_TIMESTAMP}
+                if f.get("email"):
+                    datos["email"] = f["email"]
+                lote.set(self._personas_mes(org, mes).document(clave), datos, merge=True)
+            lote.set(self._org(org).collection("gasto").document(mes),
+                     {"mes": mes, "actualizadoEn": gfs.SERVER_TIMESTAMP}, merge=True)
+            lote.commit()
 
     def guardar_gasto_api(self, org: str, mes: str, datos: dict) -> None:
         self._org(org).collection("conciliacion").document(mes).set(datos)

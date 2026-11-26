@@ -1,4 +1,5 @@
-"""Casos de uso del gasto real: recibir lo que reporta Claude y conciliar con Anthropic."""
+"""Casos de uso del gasto real: recibir la telemetría (Claude, Gemini), leer Cursor y OpenAI y
+conciliar con la facturación de Anthropic."""
 
 from __future__ import annotations
 
@@ -105,3 +106,52 @@ def sincronizar_anthropic(org_repo: RepoOrganizaciones, planes: RepoPlanes, cons
     org_repo.actualizar(org, {"anthropic": {**((org_repo.leer(org) or {}).get("anthropic") or {}),
                                             "error": None, "revisadoEn": reloj.ahora()}})
     return datos
+
+
+def inicio_mes_utc(mes: str, zona: str) -> datetime:
+    """Medianoche del día 1 del mes en la hora local de la empresa, expresada en UTC."""
+    from zoneinfo import ZoneInfo
+
+    from dominio.cierre import zona_valida
+
+    a, m = (int(x) for x in mes.split("-"))
+    return datetime(a, m, 1, tzinfo=ZoneInfo(zona_valida(zona))).astimezone(timezone.utc)
+
+
+def sincronizar_fuente(org_repo: RepoOrganizaciones, planes: RepoPlanes, consumo: RepoConsumo, reloj: Reloj,
+                       cifrador: Cifrador, fuente, org: str, servicio: str) -> dict | None:
+    """Trae de Cursor u OpenAI lo que lleva gastado cada persona en el mes y lo deja en su ficha.
+
+    Son montos acumulados (no eventos): cada sincronización reemplaza el valor anterior, así que
+    repetirla no suma de más. Las personas se emparejan por correo, igual que con Claude.
+    """
+    cifrada = org_repo.leer_secreto(org, f"{servicio}_admin")
+    if not cifrada:
+        return None
+    datos_org = org_repo.leer(org) or {}
+    estado = dict(datos_org.get(servicio) or {})
+    seg = planes.leer_seguimiento(org) or {}
+    ahora = reloj.ahora().astimezone(timezone.utc)
+    zona = datos_org.get("zona") or "America/Bogota"
+    mes = seg.get("mes") or periodo(ahora, zona)[0]
+    desde = inicio_mes_utc(mes, zona)
+    if ahora <= desde:
+        return None
+    try:
+        r = fuente.gasto_por_persona(cifrador.descifrar(cifrada), desde, ahora)
+    except Exception as e:  # clave revocada, sin permiso, plan sin API, red
+        org_repo.actualizar(org, {servicio: {**estado, "error": str(e)[:300], "revisadoEn": reloj.ahora()}})
+        return None
+    personas = (planes.leer_caso(org) or {}).get("personas") or []
+    filas: dict[str, dict] = {}
+    for f in r["filas"]:
+        clave = clave_persona(f.get("email"), personas) if f.get("email") else f"{servicio}-" + clave_segura(
+            f.get("usuario") or "sin-usuario")
+        fila = filas.setdefault(clave, {"email": f.get("email") or "", "usd": 0.0})
+        fila["usd"] = round(fila["usd"] + float(f.get("usd") or 0), 4)
+    consumo.guardar_externo(org, mes, servicio, filas)
+    total = round(sum(f["usd"] for f in filas.values()), 2)
+    org_repo.actualizar(org, {servicio: {**estado, "error": None, "revisadoEn": reloj.ahora(), "total": total,
+                                         "periodo": r.get("periodo")}})
+    _alertas(planes, consumo, reloj, org, personas, {mes: set(filas)})
+    return {"mes": mes, "total": total, "personas": len(filas)}

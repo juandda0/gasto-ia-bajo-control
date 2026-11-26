@@ -64,6 +64,36 @@ def normalizar_caso(caso: dict) -> dict:
     return limpio
 
 
+def zona_valida(zona: str | None) -> str:
+    """Zona horaria IANA (America/Bogota, Europe/Madrid…); si no es válida, Bogotá."""
+    from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+
+    try:
+        ZoneInfo(str(zona))
+        return str(zona)
+    except (ZoneInfoNotFoundError, ValueError, TypeError):
+        return "America/Bogota"
+
+
+def meses_por_cerrar(mes_seguimiento: str | None, ahora, zona: str) -> list[str]:
+    """Meses que ya terminaron en la hora local de la empresa y siguen abiertos (en orden).
+
+    El cierre automático corre cada hora; cada empresa se cierra cuando en SU zona horaria ya es
+    día 1, no a la hora de Bogotá. `ahora` es un datetime con zona (UTC).
+    """
+    from zoneinfo import ZoneInfo
+
+    if not mes_seguimiento:
+        return []
+    local = ahora.astimezone(ZoneInfo(zona_valida(zona)))
+    actual = f"{local.year}-{local.month:02d}"
+    pendientes, mes = [], mes_seguimiento
+    while mes < actual and len(pendientes) < 24:
+        pendientes.append(mes)
+        mes = siguiente_mes(mes)
+    return pendientes
+
+
 def topes_vigentes(plan: dict, con_recorte: bool) -> dict[str, float]:
     """Topes por nombre de persona; con recorte si la empresa lo aplicó en el seguimiento."""
     if con_recorte:

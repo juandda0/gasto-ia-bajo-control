@@ -23,22 +23,34 @@ export function diaDelMes(mes, zona) {
  * Gasto automático por persona: lo que reportó Claude con su id, más lo que llegó a nombre de su
  * correo antes de que la agregaran al equipo. Lo que no es de nadie queda en `sinAsignar`.
  */
+export const HERRAMIENTAS_EXTERNAS = ["cursor", "openai"];
+/** USD de una ficha por herramienta: telemetría (Claude, Gemini) + lo leído de Cursor y OpenAI. */
+export function desglose(fila) {
+  const d = {}, ph = fila.porHerramienta || {}, ex = fila.externo || {};
+  const tele = Number(fila.usd) || 0, gem = Number(ph.gemini) || 0;
+  d.claude = ph.claude != null ? Number(ph.claude) || 0 : Math.max(0, tele - gem); // fichas viejas: todo era Claude
+  if (gem) d.gemini = gem;
+  for (const h of HERRAMIENTAS_EXTERNAS) if (ex[h] != null) d[h] = Number(ex[h]) || 0;
+  return d;
+}
+const sumar = (a, b) => { for (const [k, v] of Object.entries(b)) a[k] = (a[k] || 0) + v; return a; };
+
 export function repartirGasto(personas, gastoMes) {
-  const porId = {}, porDia = {}, sinAsignar = [];
+  const porId = {}, porDia = {}, sinAsignar = [], detalle = {};
   const ids = new Set(personas.map(p => p.id));
   const porCorreo = Object.fromEntries(personas.filter(p => p.email).map(p => [String(p.email).toLowerCase(), p.id]));
   let ultimo = null;
   for (const [clave, fila] of Object.entries(gastoMes || {})) {
-    const usd = Number(fila.usd) || 0;
+    const d = desglose(fila), usd = Object.values(d).reduce((s, v) => s + v, 0);
     const dueño = ids.has(clave) ? clave : porCorreo[String(fila.email || "").toLowerCase()];
-    if (dueño) porId[dueño] = (porId[dueño] || 0) + usd;
-    else sinAsignar.push({ clave, email: fila.email || "", usd });
+    if (dueño) { porId[dueño] = (porId[dueño] || 0) + usd; detalle[dueño] = sumar(detalle[dueño] || {}, d); }
+    else if (usd > 0) sinAsignar.push({ clave, email: fila.email || "", usd, detalle: d });
     for (const [d, v] of Object.entries(fila.porDia || {})) porDia[+d] = (porDia[+d] || 0) + (Number(v) || 0);
     const t = fila.ultimo?.toDate ? fila.ultimo.toDate() : null;
     if (t && (!ultimo || t > ultimo)) ultimo = t;
   }
   sinAsignar.sort((a, b) => b.usd - a.usd);
-  return { porId, porDia, sinAsignar, ultimo };
+  return { porId, porDia, sinAsignar, ultimo, detalle };
 }
 
 /** Lee un CSV simple (coma o punto y coma, con encabezado) y devuelve personas. */

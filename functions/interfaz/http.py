@@ -73,33 +73,56 @@ def excel_bytes(plan: dict) -> bytes:
         return ruta.read_bytes()
 
 
-# ---------------------------------------------------------------- ingesta OTLP (Claude Code)
-def ingesta_otlp(req: Request) -> Response:
-    """Recibe la telemetría OTLP/JSON de Claude Code y suma el costo de cada llamada.
+# ---------------------------------------------------------------- ingesta OTLP (Claude Code, Gemini CLI)
+def _logs_desde_protobuf(crudo: bytes) -> dict:
+    """Convierte un ExportLogsServiceRequest en protobuf a la misma forma que OTLP/JSON."""
+    from google.protobuf.json_format import MessageToDict
+    from opentelemetry.proto.collector.logs.v1.logs_service_pb2 import ExportLogsServiceRequest
 
-    Claude Code manda a `<endpoint>/v1/logs` (eventos) y, si se activan, `<endpoint>/v1/metrics`.
-    Solo se usan los eventos `claude_code.api_request`; las métricas se aceptan y se ignoran para
-    que el exportador no reintente.
+    return MessageToDict(ExportLogsServiceRequest.FromString(crudo))
+
+
+def ingesta_otlp(req: Request) -> Response:
+    """Recibe la telemetría OTLP de Claude Code y Gemini CLI y suma el costo de cada llamada.
+
+    Acepta JSON (`http/json`) y protobuf (`http/protobuf`) y cualquier ruta bajo /otlp: Claude
+    Code agrega `/v1/logs`; Gemini CLI no documenta su ruta. Métricas y trazas se aceptan y se
+    ignoran para que el exportador no reintente. El token va en `x-api-key` (Cloud Run rechaza
+    un `Authorization: Bearer` que no sea de Google; se acepta por compatibilidad).
     """
     if req.method != "POST":
         return _json({"detail": "Usa POST."}, 405)
     auth = req.headers.get("Authorization") or ""
-    token = auth[7:].strip() if auth.lower().startswith("bearer ") else req.headers.get("x-api-key")
+    token = req.headers.get("x-api-key") or (auth[7:].strip() if auth.lower().startswith("bearer ") else None)
     r = contexto.repo()
     try:
         org = organizaciones.autorizar_token(r, token)
     except NoAutorizado as e:
         return _json({"detail": str(e)}, 401)
-    if req.path.rstrip("/").endswith("/v1/metrics") or req.path.rstrip("/").endswith("/v1/traces"):
-        return _json({})
     tipo = (req.headers.get("Content-Type") or "").split(";")[0].strip().lower()
-    if tipo != "application/json":
-        return _json({"detail": "Configura OTEL_EXPORTER_OTLP_PROTOCOL=http/json."}, 415)
+    proto = tipo in ("application/x-protobuf", "application/protobuf")
+    vacio = Response(b"", status=200, mimetype="application/x-protobuf") if proto else _json({})
+    ruta = req.path.rstrip("/")
+    if ruta.endswith("/v1/metrics") or ruta.endswith("/v1/traces"):
+        return vacio
     try:
-        carga = json.loads(_cuerpo(req) or b"{}")
-    except (json.JSONDecodeError, OSError, zlib.error, DatosInvalidos) as e:
+        crudo = _cuerpo(req)
+        if proto:
+            carga = _logs_desde_protobuf(crudo)
+        elif tipo == "application/json":
+            carga = json.loads(crudo or b"{}")
+        else:
+            return _json({"detail": "Usa OTLP por HTTP con JSON o protobuf."}, 415)
+    except (json.JSONDecodeError, OSError, zlib.error, DatosInvalidos, ValueError) as e:
         return _json({"detail": f"No se pudo leer el envío: {e}"}, 400)
+    except Exception:  # protobuf que no es de logs (métricas o trazas a la misma ruta)
+        return vacio
+    if not isinstance(carga, dict) or "resourceLogs" not in carga:
+        return vacio  # métricas o trazas en formato JSON
     eventos = eventos_desde_otlp(carga)
     resumen = ingesta.registrar(r, r, r, contexto.reloj(), org, eventos)
+    if proto:
+        vacio.headers["X-Eventos"] = str(resumen["recibidos"])
+        return vacio
     # respuesta OTLP de éxito total: objeto vacío
     return _json({}, **{"X-Eventos": str(resumen["recibidos"])})
