@@ -1,0 +1,56 @@
+rules_version = '2';
+
+// Todo lo de una empresa cuelga de organizaciones/{org}. Los miembros leen; los admins solo
+// editan sus datos (personas, reglas) y el seguimiento. El plan, el gasto, las alertas y los
+// tokens los escribe únicamente el servidor (Cloud Functions con el Admin SDK).
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function sesion() { return request.auth != null; }
+    function org(o) { return get(/databases/$(database)/documents/organizaciones/$(o)).data; }
+    function miembro(o) { return sesion() && request.auth.uid in org(o).roles; }
+    function admin(o) { return sesion() && org(o).roles[request.auth.uid] == 'admin'; }
+
+    match /organizaciones/{o} {
+      // listar «mis empresas» con where('miembrosUid', 'array-contains', uid)
+      allow read: if sesion() && request.auth.uid in resource.data.miembrosUid;
+      allow write: if false; // crear, invitar y quitar van por el servidor
+
+      match /estado/caso {
+        allow read: if miembro(o);
+        allow write: if admin(o)
+          && request.resource.data.keys().hasAll(['personas', 'reglas', 'version'])
+          && request.resource.data.personas is list
+          && request.resource.data.personas.size() >= 1
+          && request.resource.data.personas.size() <= 2000
+          && request.resource.data.version is int
+          && (resource == null || request.resource.data.version > resource.data.version);
+      }
+      match /estado/seguimiento {
+        allow read: if miembro(o);
+        allow write: if admin(o)
+          && request.resource.data.keys().hasOnly(['mes', 'recorte', 'manual', 'hechos'])
+          && request.resource.data.mes is string
+          && (resource == null || request.resource.data.mes == resource.data.mes) // el mes lo cambia el cierre
+          && request.resource.data.manual is map
+          && request.resource.data.hechos is map;
+      }
+      match /estado/plan { allow read: if miembro(o); allow write: if false; }
+      match /historial/{mes} { allow read: if miembro(o); allow write: if false; }
+      match /gasto/{mes} {
+        allow read: if miembro(o);
+        allow write: if false;
+        match /personas/{clave} { allow read: if miembro(o); allow write: if false; }
+      }
+      match /conciliacion/{mes} { allow read: if miembro(o); allow write: if false; }
+      match /alertas/{id} { allow read: if miembro(o); allow write: if false; }
+      match /tokens/{id} { allow read: if admin(o); allow write: if false; }
+      match /eventos/{id} { allow read, write: if false; }
+    }
+
+    // Solo el servidor
+    match /invitaciones/{email} { allow read, write: if false; }
+    match /tokensIngesta/{huella} { allow read, write: if false; }
+    match /secretos/{o} { allow read, write: if false; }
+  }
+}

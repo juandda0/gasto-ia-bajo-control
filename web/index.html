@@ -5,29 +5,31 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#09090a">
   <title>Gasto en IA bajo control</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap">
   <link rel="stylesheet" href="estilos.css">
+  <script>/* tema e idioma guardados, antes de pintar (sin parpadeo) */try{var t=localStorage.getItem("gia-tema");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t;var l=localStorage.getItem("gia-idioma");if(l)document.documentElement.lang=l;}catch(e){}</script>
 </head>
 <body>
-  <canvas id="particulas" aria-hidden="true"></canvas>
-
   <header class="top">
-    <a class="marca" href="#panel"><span class="logo"></span><span>Gasto en IA <span class="tenue">bajo control</span></span></a>
-    <nav class="pasos" aria-label="Secciones">
-      <div class="paso inicio" data-p="panel"><a href="#panel"><i class="nodo"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="7" height="8.5" rx="2"/><rect x="13.5" y="3.5" width="7" height="5" rx="2"/><rect x="13.5" y="11.5" width="7" height="9" rx="2"/><rect x="3.5" y="15" width="7" height="5.5" rx="2"/></svg></i><span>Panel</span></a></div>
+    <a class="marca" href="#panel" aria-label="Gasto en IA bajo control"><svg class="logo" viewBox="0 0 24 24" aria-hidden="true"><path class="logo-signo" d="M18 4 6.5 9.75 18 15.5"/><path class="logo-tope" d="M6.5 20.5H18"/></svg><span class="nombre"><b>Gasto en IA</b><small>bajo control</small></span></a>
+    <nav class="pasos" id="pasos" aria-label="Secciones">
+      <div class="paso inicio" data-p="panel"><a href="#panel"><i class="nodo"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="7" height="8.5" rx="2"/><rect x="13.5" y="3.5" width="7" height="5" rx="2"/><rect x="13.5" y="11.5" width="7" height="9" rx="2"/><rect x="3.5" y="15" width="7" height="5.5" rx="2"/></svg></i><span data-t="Panel">Panel</span></a></div>
       <span class="separador" aria-hidden="true"></span>
-      <div class="paso" data-p="datos"><a href="#datos"><i class="nodo"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19.5c.7-3 2.9-4.8 5.5-4.8s4.8 1.8 5.5 4.8"/><path d="M15.5 4.9a3.2 3.2 0 0 1 0 6.2M17.2 14.9c1.7.7 2.8 2.3 3.3 4.6"/></svg></i><span>Datos</span></a></div>
+      <div class="paso" data-p="datos"><a href="#datos"><i class="nodo"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19.5c.7-3 2.9-4.8 5.5-4.8s4.8 1.8 5.5 4.8"/><path d="M15.5 4.9a3.2 3.2 0 0 1 0 6.2M17.2 14.9c1.7.7 2.8 2.3 3.3 4.6"/></svg></i><span data-t="Datos">Datos</span></a></div>
       <span class="linea" data-linea="plan" aria-hidden="true"><i></i></span>
-      <div class="paso" data-p="plan"><a href="#plan"><i class="nodo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6.5h9M5 12h6M5 17.5h9"/><path d="m15 12.2 2.2 2.2 4-4.4"/></svg></i><span>Plan</span></a></div>
+      <div class="paso" data-p="plan"><a href="#plan"><i class="nodo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6.5h9M5 12h6M5 17.5h9"/><path d="m15 12.2 2.2 2.2 4-4.4"/></svg></i><span data-t="Plan">Plan</span></a></div>
       <span class="linea" data-linea="seguimiento" aria-hidden="true"><i></i></span>
-      <div class="paso" data-p="seguimiento"><a href="#seguimiento"><i class="nodo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12.5h4l2.6-6.5 4.2 13 2.7-6.5H21"/></svg></i><span>Seguimiento</span></a></div>
+      <div class="paso" data-p="seguimiento"><a href="#seguimiento"><i class="nodo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12.5h4l2.6-6.5 4.2 13 2.7-6.5H21"/></svg></i><span data-t="Seguimiento">Seguimiento</span></a></div>
     </nav>
+    <div class="preferencias" id="preferencias"></div>
+    <div class="cuenta" id="cuenta"></div>
   </header>
 
   <main id="app" aria-live="polite"></main>
   <div class="aviso" id="aviso" role="status"></div>
-  <script src="app.js"></script>
+  <script type="module" src="js/ui/app.js"></script>
 </body>
 </html>

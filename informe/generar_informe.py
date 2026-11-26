@@ -22,11 +22,11 @@ import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 
 RAIZ = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(RAIZ))
+sys.path.insert(0, str(RAIZ / "functions"))  # el motor vive en functions/dominio
 
-from optimizador import transporte  # noqa: E402
-from optimizador.caso import caso_base, rendimientos  # noqa: E402
-from optimizador.ciclo import VALOR_POR_EQUIPO, bolsas, modelo0, modelo1, resolver  # noqa: E402
+from dominio import transporte  # noqa: E402
+from dominio.caso import caso_base, rendimientos  # noqa: E402
+from dominio.ciclo import VALOR_POR_EQUIPO, bolsas, modelo0, modelo1, resolver  # noqa: E402
 
 # ------------------------------------------------------------------ datos de la portada
 TITULO = "Gasto en IA bajo control"

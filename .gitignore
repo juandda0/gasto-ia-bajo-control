@@ -7,3 +7,10 @@ __pycache__/
 .env.*
 .vercel
 .env*
+functions/venv/
+functions/.secret.local
+*.local
+.firebase/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log

@@ -1,54 +1,87 @@
 # Gasto en IA bajo control
 
-Proyecto de Programación Lineal (Universidad de Córdoba). Le dice a una empresa qué
-plan de IA le conviene a cada programador (Claude, Cursor, OpenAI, API), cuánto
-debería usar cada uno, con qué fuente pagarlo y cuándo se está gastando de más.
+Le dice a una empresa qué plan de IA le conviene a cada programador (Claude, Cursor, OpenAI, API),
+cuánto debería usar cada uno y, **en vivo**, cuánto lleva gastando cada persona en Claude Code.
 
-La empresa solo pone lo que ya sabe: salario, herramienta y gasto del mes pasado
-de cada persona, más sus reglas (presupuesto, tope por persona, mínimo, recorte).
-Nadie tiene que estimar tokens.
+La empresa pone lo que ya sabe (salario, herramienta y gasto del mes pasado de cada persona, más sus
+reglas). TI conecta Claude Code una sola vez para toda la empresa y el costo de cada llamada llega
+solo, asignado a cada persona por su correo. El plan se recalcula solo cuando cambian los datos y el
+mes se cierra solo el día 1. Español e inglés; modo claro y oscuro.
 
-**En línea:** <https://gasto-ia-bajo-control.vercel.app> · paso a paso del curso en
-<https://gasto-ia-bajo-control.vercel.app/clase/>
+Nació como proyecto de Programación Lineal (Universidad de Córdoba); la vista académica sigue en `/clase/`.
 
-## Cómo correrla
+## Arquitectura (Firebase, por capas)
 
-Con [uv](https://docs.astral.sh/uv/):
-
-```bash
-uv venv .venv
-uv pip install --python .venv/bin/python -r requirements-dev.txt
-.venv/bin/uvicorn servidor:app --port 8765
+```
+web/                          navegador (Firebase Hosting)
+  js/ui/                      interfaz: pantallas, idioma (en.js) y tema
+  js/dominio/                 fechas del mes, reparto del gasto, lectura de CSV (funciones puras)
+  js/datos/                   Firebase: Auth, Firestore en tiempo real, acciones del servidor
+  clase/                      vista académica del curso (usa la API pública)
+functions/                    backend (Cloud Functions, Python 3.13)
+  main.py                     solo registra las funciones
+  interfaz/                   HTTP (API pública e ingesta OTLP), acciones del panel, cableado
+  aplicacion/                 casos de uso: empresas, planes, ingesta, cierre, conciliación
+  dominio/                    programación lineal y reglas del negocio, sin red ni base de datos
+  infraestructura/            Firestore, API de costos de Anthropic, cifrado, Excel
+  tests/                      116 pruebas (motor matemático + casos de uso con repos en memoria)
+firestore.rules               miembros leen; admins editan datos; el resto lo escribe solo el servidor
 ```
 
-Luego abrir <http://localhost:8765>. (Se usa el puerto 8765 porque el 8000 suele estar ocupado.)
+Cada capa solo conoce a la de abajo. Los casos de uso hablan con puertos (`aplicacion/puertos.py`), así
+las pruebas corren sin Firebase.
 
-`requirements.txt` trae solo lo que necesita la app; `requirements-dev.txt` le suma `pytest`.
+### Funciones
 
-## Despliegue
+| Función | Tipo | Qué hace |
+| --- | --- | --- |
+| `ingesta` | HTTP (`/otlp/v1/logs`) | Recibe la telemetría OTLP/JSON de Claude Code, suma el costo de cada evento `claude_code.api_request` una sola vez y levanta alertas al 80 % y 100 % del tope |
+| `recalcular_plan` | Firestore | Cada vez que cambia `estado/caso`, resuelve el ciclo y guarda el plan |
+| `app` | Invocable | Acciones del panel: crear empresa, invitar, tokens, clave de Anthropic, cerrar mes, Excel |
+| `cierre_mensual` | Programada (día 1, 00:05 Bogotá) | Cierra el mes: el gasto real pasa a ser el «mes pasado» y se calcula el plan nuevo |
+| `conciliar_anthropic` | Programada (cada 3 h) | Trae lo facturado de la Usage and Cost Analytics API de Anthropic (opcional) |
+| `api` | HTTP (`/api/**`) | Cálculo público sin cuenta (vista de clase) |
 
-La app está en [Vercel](https://vercel.com) como una función de Python (FastAPI). `index.py` es el punto de
-entrada y solo importa la `app` de `servidor.py`; la misma función sirve la API y la carpeta `web/`.
-`.vercelignore` deja por fuera el informe, la presentación, los resultados y las pruebas.
+### Conectar Claude Code (lo hace TI una vez)
 
-```bash
-vercel deploy --prod
+En Ajustes se genera un token de la empresa (solo se guarda su huella SHA-256) y se copia este bloque
+a la configuración administrada de Claude Code (`managed-settings.json`) o al `~/.claude/settings.json`
+de una persona:
+
+```json
+{
+  "env": {
+    "CLAUDE_CODE_ENABLE_TELEMETRY": "1",
+    "OTEL_LOGS_EXPORTER": "otlp",
+    "OTEL_EXPORTER_OTLP_PROTOCOL": "http/json",
+    "OTEL_EXPORTER_OTLP_ENDPOINT": "https://gasto-ia-bajo-control.web.app/otlp",
+    "OTEL_EXPORTER_OTLP_HEADERS": "x-api-key=gia_…"
+  }
+}
 ```
 
-Cada push a `main` en GitHub también publica una versión nueva.
+Solo viajan costo, tokens, modelo y correo; nunca código ni mensajes.
 
-## Dos vistas
+## Correr en local
 
-- **Vista empresa** (`/`): la que usa el cliente, pensada primero para el celular. Tiene cuatro pantallas:
-  - **Panel:** las cifras del mes, el gasto día a día, alertas y la evolución mes a mes.
-  - **Datos:** las personas y las reglas, en lenguaje de negocio.
-  - **Plan:** qué plan darle a cada uno, sus topes, qué hacer y qué pasa si cambia o se recorta el presupuesto.
-  - **Seguimiento:** se anota el gasto del mes y se ve la proyección al cierre; al cerrar el mes, el gasto real alimenta el plan del siguiente.
+```bash
+uv venv functions/venv --python 3.13
+uv pip install --python functions/venv/bin/python -r functions/requirements.txt pytest matplotlib
+python3 -c "from cryptography.fernet import Fernet;print('CLAVE_CIFRADO='+Fernet.generate_key().decode())" > functions/.secret.local
+firebase emulators:start --project gasto-ia-bajo-control
+```
 
-  Todo se guarda solo en el navegador.
-- **Vista clase** (`/clase/`): opcional. El paso a paso de cada método del curso con los datos de la empresa.
+Abrir <http://localhost:5100>. En localhost la web usa los emuladores (Auth 9199, Firestore 8181,
+Functions 5101, Hosting 5100, UI 4100). Pruebas: `functions/venv/bin/python -m pytest -q functions/tests`.
 
-Pruebas: `.venv/bin/python -m pytest`
+## Desplegar
+
+Requiere el plan Blaze (Functions, Scheduler y Secret Manager) y el proveedor Google activado en Authentication.
+
+```bash
+python3 -c "from cryptography.fernet import Fernet;print(Fernet.generate_key().decode(), end='')" | firebase functions:secrets:set CLAVE_CIFRADO --data-file - --project gasto-ia-bajo-control
+firebase deploy --project gasto-ia-bajo-control
+```
 
 ## El ciclo: cada método alimenta al siguiente
 
@@ -62,21 +95,6 @@ Pruebas: `.venv/bin/python -m pytest`
 
 Al final se comprueba que el ciclo da lo mismo que un solo modelo lineal unido.
 
-## Archivos
-
-- `optimizador/caso.py`: datos del caso de ejemplo (personas, reglas, planes, tramos de rendimiento).
-- `optimizador/asignacion.py`: método húngaro programado a mano, con cada paso.
-- `optimizador/simplex.py`: Simplex y Dual Simplex en tabla, programados a mano.
-- `optimizador/transporte.py`: esquina noroeste, costo mínimo, Vogel y MODI, programados a mano.
-- `optimizador/grafico.py`: método gráfico (vértices de la región factible).
-- `optimizador/ciclo.py`: arma los modelos y los encadena (`resolver(caso)`).
-- `optimizador/excel.py`: genera el libro de Excel listo para Solver.
-- `optimizador/datos.py`: tabla de precios oficiales consultada (referencia).
-- `servidor.py`: API (FastAPI) que sirve `web/` (vista empresa) y `web/clase/` (vista clase).
-- `resultados/modelos-solver.xlsx`: libro de Excel con los modelos (celdas amarillas = decisiones, azul = objetivo).
-- `informe/`: informe del proyecto en PDF.
-- `presentacion/`: presentación de avance.
-- `tests/`: pruebas (húngaro contra SciPy, Simplex y Dual Simplex contra `linprog`, MODI contra el óptimo, ciclo = modelo unido, precios sombra).
-
-Los salarios, rendimientos, bolsas y precios de los planes son supuestos del caso
-de ejemplo y se pueden cambiar desde la app.
+Los salarios, rendimientos, bolsas y precios de los planes del caso de ejemplo son supuestos y se
+pueden cambiar desde la app. El informe del curso está en `informe/`, la presentación en `presentacion/`
+y el libro de Excel con Solver en `resultados/`.

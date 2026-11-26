@@ -1,0 +1,43 @@
+{
+  "firestore": {
+    "database": "(default)",
+    "location": "us-east1",
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "default",
+      "runtime": "python313",
+      "ignore": ["venv", "tests", "__pycache__", ".pytest_cache", "*.local", ".secret.local"]
+    }
+  ],
+  "hosting": {
+    "public": "web",
+    "cleanUrls": true,
+    "ignore": ["firebase.json", "**/.*"],
+    "rewrites": [
+      { "source": "/api/**", "function": { "functionId": "api", "region": "us-east1" } },
+      { "source": "/otlp/**", "function": { "functionId": "ingesta", "region": "us-east1" } }
+    ],
+    "headers": [
+      { "source": "**/*.@(html|js|css)", "headers": [{ "key": "Cache-Control", "value": "no-cache" }] },
+      { "source": "/", "headers": [{ "key": "Cache-Control", "value": "no-cache" }] },
+      { "source": "/clase/", "headers": [{ "key": "Cache-Control", "value": "no-cache" }] },
+      { "source": "**", "headers": [
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
+        { "key": "X-Frame-Options", "value": "DENY" }
+      ] }
+    ]
+  },
+  "emulators": {
+    "auth": { "port": 9199 },
+    "firestore": { "port": 8181 },
+    "functions": { "port": 5101 },
+    "hosting": { "port": 5100 },
+    "ui": { "enabled": true, "port": 4100 },
+    "singleProjectMode": true
+  }
+}

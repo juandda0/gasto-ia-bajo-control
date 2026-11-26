@@ -2,9 +2,9 @@ import numpy as np
 import pytest
 from scipy.optimize import linear_sum_assignment, linprog
 
-from optimizador import asignacion, grafico, simplex, transporte
-from optimizador.caso import caso_base, presupuesto
-from optimizador.ciclo import bolsas, modelo0, modelo1, resolver
+from dominio import asignacion, grafico, simplex, transporte
+from dominio.caso import caso_base, presupuesto
+from dominio.ciclo import bolsas, modelo0, modelo1, resolver
 
 
 def optimo_transporte(oferta, demanda, costos):

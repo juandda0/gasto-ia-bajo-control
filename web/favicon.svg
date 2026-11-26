@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Marca «Gasto en IA bajo control»: el signo ≤ (gasto ≤ tope); la raya de abajo es el tope -->
+  <style>
+    .signo { stroke: #111113; }
+    .tope { stroke: #15803d; }
+    @media (prefers-color-scheme: dark) {
+      .signo { stroke: #ededee; }
+      .tope { stroke: #3ddc84; }
+    }
+  </style>
+  <path class="signo" d="M18 4 6.5 9.75 18 15.5"/>
+  <path class="tope" d="M6.5 20.5H18"/>
+</svg>

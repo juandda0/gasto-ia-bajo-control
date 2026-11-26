@@ -1,0 +1,6 @@
+{
+  "indexes": [],
+  "fieldOverrides": [
+    { "collectionGroup": "eventos", "fieldPath": "expiraEn", "ttl": true, "indexes": [] }
+  ]
+}

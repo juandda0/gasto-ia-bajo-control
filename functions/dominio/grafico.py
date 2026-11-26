@@ -3,7 +3,6 @@
 from dataclasses import dataclass
 from itertools import combinations
 
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
@@ -54,6 +53,8 @@ def resolver(c1: float, c2: float, restricciones: list[Restriccion], maximizar: 
 
 
 def graficar(c1: float, c2: float, restricciones: list[Restriccion], tabla: pd.DataFrame, optimo, etiquetas=("x₁", "x₂")):
+    import matplotlib.pyplot as plt  # solo para el informe; las Functions no lo necesitan
+
     fig, ax = plt.subplots(figsize=(7, 5.5))
     limite = max(tabla["x1"].max(), tabla["x2"].max(), 1.0) * 1.4 if not tabla.empty else 10.0
     xs = np.linspace(0, limite, 400)
